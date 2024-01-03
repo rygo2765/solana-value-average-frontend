@@ -1,10 +1,18 @@
 import React from 'react';
+import {ValueAverageProgram} from 'solana-value-average'
 
 const HomePage: React.FC = () => {
+
+  const openValueAverage = async (e: React.FormEvent<HTMLFormElement>) => {
+    console.log(e)
+  }
+
+
   return (
     <div>
-      <h1>Welcome to my homepage!</h1>
-      <p>This is a simple homepage built with Next.js and TypeScript.</p>
+      <form onSubmit={openValueAverage} className='w-full'>
+        <label className='label' htmlFor=''
+      </form>
     </div>
   );
 };
