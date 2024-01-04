@@ -4,7 +4,7 @@ import { UnifiedWalletProvider, UnifiedWalletButton } from "@jup-ag/wallet-adapt
 import { IWalletNotification } from "@jup-ag/wallet-adapter/dist/types/contexts/WalletConnectionProvider";
 import { toast } from "sonner";
 
-const WalletAdapter: React.FC = () => {
+const WalletAdapter: React.FC<{children: React.ReactNode}> = (props) => {
   const WalletNotification = {
     onConnect: (props: IWalletNotification) => {
       toast.success(
@@ -86,7 +86,7 @@ const WalletAdapter: React.FC = () => {
         lang: "en",
       }}
     >
-      <UnifiedWalletButton />
+      {props.children}
     </UnifiedWalletProvider>
   );
 };
