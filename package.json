@@ -4,14 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build ",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@jup-ag/wallet-adapter": "^0.1.5",
     "@solana/web3.js": "^1.87.6",
+    "buffer": "^6.0.3",
     "next": "14.0.4",
+    "next-transpile-modules": "^10.0.1",
     "react": "^18",
     "react-dom": "^18",
     "solana-value-average": "^0.1.2",
