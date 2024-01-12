@@ -5,21 +5,51 @@ import { useUnifiedWallet } from "@jup-ag/wallet-adapter";
 import { conn } from "@/lib/constants";
 import { PublicKey } from "@solana/web3.js";
 import { TuiDateTimePicker } from "nextjs-tui-date-picker";
-import { truncate } from "fs";
 
 const programClient = new ValueAverageProgram(conn, "mainnet-beta");
 
 const HomePage: React.FC = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState("minute");
+  const [selectedTimeframeInSec, setSelectedTimeframeInSec] = useState(60);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedDateTime, setSelectedDateTime] = useState(new Date());
 
   useEffect(() => {
     console.log("Selected time frame", selectedTimeframe);
   }, [selectedTimeframe]);
 
   const handleTimeframeSelect = (timeframe: string) => {
-    setSelectedTimeframe(timeframe);
+    switch (timeframe) {
+      case "minute":
+        setSelectedTimeframe(timeframe);
+        setSelectedTimeframeInSec(60);
+        break;
+      case "hour":
+        setSelectedTimeframe(timeframe);
+        setSelectedTimeframeInSec(60 * 60);
+        break;
+      case "day":
+        setSelectedTimeframe(timeframe);
+        setSelectedTimeframeInSec(60 * 60 * 24);
+        break;
+      case "week":
+        setSelectedTimeframe(timeframe);
+        setSelectedTimeframeInSec(60 * 60 * 24 * 7);
+        break;
+      case "month":
+        setSelectedTimeframe(timeframe);
+        setSelectedTimeframeInSec(60 * 60 * 24 * 7 * 30);
+        break;
+    }
     setIsDropdownOpen(false);
+  };
+
+  const handleDateTimeSelect = (newDateTime: Date): void => {
+    console.log(typeof selectedDateTime);
+    const parsedDate = new Date(newDateTime);
+    console.log(typeof parsedDate);
+    setSelectedDateTime(parsedDate);
+    // setSelectedDateTime(newDateTime);
   };
 
   const { wallet, connected } = useUnifiedWallet();
@@ -29,24 +59,38 @@ const HomePage: React.FC = () => {
 
   const openValueAverage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // console.log(e)
 
-    console.log("Selected time frame", selectedTimeframe);
+    const formData = new FormData(e.target as HTMLFormElement);
+   
 
-    const userPublicKey = wallet?.adapter.publicKey as PublicKey;
-    const inputToken = new PublicKey(
-      "So11111111111111111111111111111111111111112"
-    );
-    const outputToken = new PublicKey(
-      "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
-    );
-    const orderInterval = BigInt(60 * 60 * 24);
-    const deposit = BigInt(0.2 * 10 ** 9);
-    const tokenValueIncrement = BigInt(0.01 * 10 ** 9);
-    const startAtUnix = BigInt(1741340800);
+    const orderIntervalValue = parseInt(formData.get("orderIntervalValue") as string);
+    console.log(orderIntervalValue * selectedTimeframeInSec)
 
-    // const acc = await programClient.get(userPublicKey)
-    // console.log(acc)
+    // const valueAverageData = {
+    //   userPublicKey: wallet?.adapter.publicKey as PublicKey,
+    //   inputToken: new PublicKey(formData.get("inputToken")!),
+    //   outputToken: new PublicKey(formData.get("outputToken")!),
+    //   orderInterval: orderIntervalValue * selectedTimeframeInSec,
+    // };
+
+
+
+    // console.log("Selected time frame", selectedTimeframe);
+    // console.log(typeof selectedDateTime)
+    // const unix = selectedDateTime.getTime()
+    // console.log(unix)
+
+    // const userPublicKey = wallet?.adapter.publicKey as PublicKey;
+    // const inputToken = new PublicKey(
+    //   "So11111111111111111111111111111111111111112"
+    // );
+    // const outputToken = new PublicKey(
+    //   "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+    // );
+    // const orderInterval = BigInt(60 * 60 * 24);
+    // const deposit = BigInt(0.2 * 10 ** 9);
+    // const tokenValueIncrement = BigInt(0.01 * 10 ** 9);
+    // const startAtUnix = BigInt(1741340800);
 
     // const {ix: ixs, pda} = await programClient.open(
     //   userPublicKey,
@@ -66,8 +110,11 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center justify-center bg-base-100 h-screen">
-      <div className="flex flex-col justify-center items-center bg-neutral rounded-lg w-1/3 h-1/2 shadow-md">
-        <form onSubmit={openValueAverage} className="form-control w-full px-2">
+      <div className="flex flex-col justify-center items-center bg-neutral rounded-lg w-1/3 h-full my-10 shadow-md">
+        <form
+          onSubmit={openValueAverage}
+          className="form-control w-full h-full px-2"
+        >
           {/* input token field */}
           <div className="form-control w-full">
             <label className="label" htmlFor="inputToken">
@@ -94,6 +141,7 @@ const HomePage: React.FC = () => {
             />
           </div>
 
+          {/* Order Interval Input */}
           <div className="flex flex-col w-full mt-2">
             <label className="label" htmlFor="orderIntervalValue">
               <span className="label-text">Every</span>
@@ -103,6 +151,7 @@ const HomePage: React.FC = () => {
                 type="number"
                 name="orderIntervalValue"
                 placeholder="1"
+                value={1}
                 className="input input-bordered w-1/2"
               />
               <div className="dropdown w-1/2">
@@ -188,15 +237,18 @@ const HomePage: React.FC = () => {
             />
           </div>
 
-          <TuiDateTimePicker
-            handleChange={() => console.log("Hello world!")}
-            date={new Date("2023-01-01")}
-            inputWidth={180}
-            fontSize={16}
-            timePicker={true}
-            format="yyyy-MM-dd HH:mm"
-          />
-     
+          {/* Start Date & Time Selector */}
+          <div className="flex flex-row w-full justify-end items-center">
+            <p className="w-1/2">Start date & time: </p>
+            <TuiDateTimePicker
+              handleChange={handleDateTimeSelect}
+              date={selectedDateTime}
+              inputWidth={180}
+              fontSize={16}
+              timePicker={true}
+              format="yyyy-MM-dd HH:mm"
+            />
+          </div>
 
           <button className="btn my-2" type="submit">
             Submit
