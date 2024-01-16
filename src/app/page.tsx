@@ -14,10 +14,6 @@ const HomePage: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedDateTime, setSelectedDateTime] = useState(new Date());
 
-  useEffect(() => {
-    console.log("Selected time frame", selectedTimeframe);
-  }, [selectedTimeframe]);
-
   const handleTimeframeSelect = (timeframe: string) => {
     switch (timeframe) {
       case "minute":
@@ -45,9 +41,7 @@ const HomePage: React.FC = () => {
   };
 
   const handleDateTimeSelect = (newDateTime: Date): void => {
-    console.log(typeof selectedDateTime);
     const parsedDate = new Date(newDateTime);
-    console.log(typeof parsedDate);
     setSelectedDateTime(parsedDate);
     // setSelectedDateTime(newDateTime);
   };
@@ -61,24 +55,67 @@ const HomePage: React.FC = () => {
     e.preventDefault();
 
     const formData = new FormData(e.target as HTMLFormElement);
-   
-
-    const orderIntervalValue = parseInt(formData.get("orderIntervalValue") as string);
-    console.log(orderIntervalValue * selectedTimeframeInSec)
-
-    // const valueAverageData = {
-    //   userPublicKey: wallet?.adapter.publicKey as PublicKey,
-    //   inputToken: new PublicKey(formData.get("inputToken")!),
-    //   outputToken: new PublicKey(formData.get("outputToken")!),
-    //   orderInterval: orderIntervalValue * selectedTimeframeInSec,
-    // };
 
 
+    //order interval validation and conversion 
+    const orderIntervalValueString = formData.get("orderIntervalValue") as string;
 
-    // console.log("Selected time frame", selectedTimeframe);
-    // console.log(typeof selectedDateTime)
-    // const unix = selectedDateTime.getTime()
-    // console.log(unix)
+    let orderIntervalValue: number;
+    //orderIntervalValue validation
+    if (/^[1-9]\d*$|^$/.test(orderIntervalValueString)) {
+      // If the input is a positive integer or an empty string, parse it
+      orderIntervalValue = orderIntervalValueString === "" ? 1 : parseInt(orderIntervalValueString, 10);
+    } else {
+      // If the input is not valid, handle it accordingly (display an error message, etc.)
+      console.error("Invalid orderIntervalValue");
+      return;
+    }
+
+
+    //deposit validation and conversion
+    const totalAmountDepositString = formData.get("totalAmountDeposit") as string
+
+    let totalAmountDeposit: number;
+    if (/^\d*\.?\d+$/.test(totalAmountDepositString)) {
+      // If the input is a valid float or integer, parse it
+      totalAmountDeposit = parseFloat(totalAmountDepositString);
+    } else {
+      // If the input is not valid, handle it accordingly (display an error message, etc.)
+      console.error("Invalid totalAmountDeposit");
+      return;
+    }
+    
+    const deposit = BigInt(totalAmountDeposit * 10 ** 9);
+
+    //total value increment validation and conversion
+    const totalValueIncrementString = formData.get("totalValueIncrement") as string
+
+    let totalValueIncrement : number;
+
+    if (/^\d*\.?\d+$/.test(totalValueIncrementString)) {
+      // If the input is a valid float or integer, parse it
+      totalValueIncrement = parseFloat(totalValueIncrementString);
+    } else {
+      // If the input is not valid, handle it accordingly (display an error message, etc.)
+      console.error("Invalid totalValueIncrement");
+      return;
+    }
+
+    const valueIncrement = BigInt(totalValueIncrement * 10 ** 6);
+
+    console.log(deposit)
+    console.log(valueIncrement)
+    console.log(selectedDateTime.getTime())
+
+    const valueAverageData = {
+      userPublicKey: wallet?.adapter.publicKey as PublicKey,
+      inputToken: new PublicKey(formData.get("inputToken")!),
+      outputToken: new PublicKey(formData.get("outputToken")!),
+      orderInterval: BigInt(orderIntervalValue * selectedTimeframeInSec),
+      deposit: deposit,
+      usdcValueIncrement: valueIncrement,
+      startDateTime: BigInt(selectedDateTime.getTime())
+    };
 
     // const userPublicKey = wallet?.adapter.publicKey as PublicKey;
     // const inputToken = new PublicKey(
@@ -92,20 +129,20 @@ const HomePage: React.FC = () => {
     // const tokenValueIncrement = BigInt(0.01 * 10 ** 9);
     // const startAtUnix = BigInt(1741340800);
 
-    // const {ix: ixs, pda} = await programClient.open(
-    //   userPublicKey,
-    //   userPublicKey,
-    //   inputToken,
-    //   outputToken,
-    //   orderInterval,
-    //   deposit,
-    //   tokenValueIncrement,
-    //   undefined,
-    //   undefined
-    // )
+    const {ix: ixs, pda} = await programClient.open(
+      valueAverageData.userPublicKey,
+      valueAverageData.userPublicKey,
+      valueAverageData.inputToken,
+      valueAverageData.outputToken,
+      valueAverageData.orderInterval,
+      valueAverageData.deposit,
+      valueAverageData.usdcValueIncrement,
+      undefined,
+      valueAverageData.startDateTime
+    )
 
-    // console.log(ixs)
-    // console.log(pda)
+    console.log(ixs)
+    console.log(pda)
   };
 
   return (
@@ -151,7 +188,6 @@ const HomePage: React.FC = () => {
                 type="number"
                 name="orderIntervalValue"
                 placeholder="1"
-                value={1}
                 className="input input-bordered w-1/2"
               />
               <div className="dropdown w-1/2">
@@ -217,7 +253,7 @@ const HomePage: React.FC = () => {
               <span className="label-text">Total Amount Deposit</span>
             </label>
             <input
-              type="number"
+              type="text"
               name="totalAmountDeposit"
               placeholder=""
               className="input input-bordered w-full"
@@ -230,7 +266,7 @@ const HomePage: React.FC = () => {
               <span className="label-text">Total Value Increment</span>
             </label>
             <input
-              type="number"
+              type="text"
               name="totalValueIncrement"
               placeholder=""
               className="input input-bordered w-full"
