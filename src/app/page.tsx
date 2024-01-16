@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { ValueAverageProgram } from "solana-value-average";
 import { useUnifiedWallet } from "@jup-ag/wallet-adapter";
 import { conn } from "@/lib/constants";
-import { PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
 import { TuiDateTimePicker } from "nextjs-tui-date-picker";
 
 const programClient = new ValueAverageProgram(conn, "mainnet-beta");
@@ -103,10 +103,6 @@ const HomePage: React.FC = () => {
 
     const valueIncrement = BigInt(totalValueIncrement * 10 ** 6);
 
-    console.log(deposit)
-    console.log(valueIncrement)
-    console.log(selectedDateTime.getTime())
-
     const valueAverageData = {
       userPublicKey: wallet?.adapter.publicKey as PublicKey,
       inputToken: new PublicKey(formData.get("inputToken")!),
@@ -116,18 +112,6 @@ const HomePage: React.FC = () => {
       usdcValueIncrement: valueIncrement,
       startDateTime: BigInt(selectedDateTime.getTime())
     };
-
-    // const userPublicKey = wallet?.adapter.publicKey as PublicKey;
-    // const inputToken = new PublicKey(
-    //   "So11111111111111111111111111111111111111112"
-    // );
-    // const outputToken = new PublicKey(
-    //   "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
-    // );
-    // const orderInterval = BigInt(60 * 60 * 24);
-    // const deposit = BigInt(0.2 * 10 ** 9);
-    // const tokenValueIncrement = BigInt(0.01 * 10 ** 9);
-    // const startAtUnix = BigInt(1741340800);
 
     const {ix: ixs, pda} = await programClient.open(
       valueAverageData.userPublicKey,
@@ -141,8 +125,33 @@ const HomePage: React.FC = () => {
       valueAverageData.startDateTime
     )
 
-    console.log(ixs)
-    console.log(pda)
+    const tx = new Transaction();
+    tx.add(ixs);
+
+    if (!connected || wallet === null) {
+      throw new Error('Wallet is not connected');
+    }
+
+    const txsig = await wallet.adapter.sendTransaction(
+      tx,
+      conn,
+      {
+        skipPreflight: false,
+      }
+    )
+
+    const latestBlockHash = await conn.getLatestBlockhash();
+
+    try {
+      await conn.confirmTransaction({
+        blockhash: latestBlockHash.blockhash,
+        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+        signature: txsig,
+      }, 'confirmed')
+      console.log('Transaction confirmed!');
+    } catch(error){
+      console.error('Confirmation failed: ', error);
+    }
   };
 
   return (
