@@ -85,7 +85,7 @@ const HomePage: React.FC = () => {
       return;
     }
     
-    const deposit = BigInt(totalAmountDeposit * 10 ** 9);
+    const deposit = BigInt(totalAmountDeposit * 10 **9);
 
     //total value increment validation and conversion
     const totalValueIncrementString = formData.get("totalValueIncrement") as string
@@ -113,7 +113,7 @@ const HomePage: React.FC = () => {
       startDateTime: BigInt(selectedDateTime.getTime())
     };
 
-    const {ix: ixs, pda} = await programClient.open(
+    const {ixs, pda} = await programClient.open(
       valueAverageData.userPublicKey,
       valueAverageData.userPublicKey,
       valueAverageData.inputToken,
@@ -126,7 +126,7 @@ const HomePage: React.FC = () => {
     )
 
     const tx = new Transaction();
-    tx.add(ixs);
+    tx.add(...ixs);
 
     if (!connected || wallet === null) {
       throw new Error('Wallet is not connected');
@@ -136,9 +136,11 @@ const HomePage: React.FC = () => {
       tx,
       conn,
       {
-        skipPreflight: false,
+        skipPreflight: true,
       }
     )
+    
+    console.log(txsig)
 
     const latestBlockHash = await conn.getLatestBlockhash();
 
