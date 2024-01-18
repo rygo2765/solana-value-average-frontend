@@ -1,6 +1,6 @@
 "use client"
 import React from "react";
-import { UnifiedWalletProvider, UnifiedWalletButton } from "@jup-ag/wallet-adapter";
+import { UnifiedWalletProvider } from "@jup-ag/wallet-adapter";
 import { IWalletNotification } from "@jup-ag/wallet-adapter/dist/types/contexts/WalletConnectionProvider";
 import { toast } from "sonner";
 

@@ -1,5 +1,4 @@
 "use client"
-import WalletAdapter from "./WalletAdapter"
 import Link from "next/link"
 import { UnifiedWalletButton } from "@jup-ag/wallet-adapter"
 

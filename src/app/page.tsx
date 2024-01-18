@@ -1,18 +1,16 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { ValueAverageProgram } from "solana-value-average";
+import React, { useState } from "react";
 import { useUnifiedWallet } from "@jup-ag/wallet-adapter";
-import { conn } from "@/lib/constants";
-import { Connection, PublicKey, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import { TuiDateTimePicker } from "nextjs-tui-date-picker";
-
-const programClient = new ValueAverageProgram(conn, "mainnet-beta");
+import { openValueAverage, validateAndConvertValues } from "@/lib/helpers";
 
 const HomePage: React.FC = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState("minute");
   const [selectedTimeframeInSec, setSelectedTimeframeInSec] = useState(60);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedDateTime, setSelectedDateTime] = useState(new Date());
+  const { wallet, connected } = useUnifiedWallet();
 
   const handleTimeframeSelect = (timeframe: string) => {
     switch (timeframe) {
@@ -43,124 +41,56 @@ const HomePage: React.FC = () => {
   const handleDateTimeSelect = (newDateTime: Date): void => {
     const parsedDate = new Date(newDateTime);
     setSelectedDateTime(parsedDate);
-    // setSelectedDateTime(newDateTime);
   };
 
-  const { wallet, connected } = useUnifiedWallet();
-  if (connected) {
-    console.log(wallet?.adapter.publicKey?.toBase58());
-  }
-
-  const openValueAverage = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!connected) {
+      throw new Error("Wallet is not connected.");
+    }
 
     const formData = new FormData(e.target as HTMLFormElement);
 
+    const orderIntervalValueString = formData.get(
+      "orderIntervalValue"
+    ) as string;
+    const totalAmountDepositString = formData.get(
+      "totalAmountDeposit"
+    ) as string;
+    const totalValueIncrementString = formData.get(
+      "totalValueIncrement"
+    ) as string;
 
-    //order interval validation and conversion 
-    const orderIntervalValueString = formData.get("orderIntervalValue") as string;
-
-    let orderIntervalValue: number;
-    //orderIntervalValue validation
-    if (/^[1-9]\d*$|^$/.test(orderIntervalValueString)) {
-      // If the input is a positive integer or an empty string, parse it
-      orderIntervalValue = orderIntervalValueString === "" ? 1 : parseInt(orderIntervalValueString, 10);
-    } else {
-      // If the input is not valid, handle it accordingly (display an error message, etc.)
-      console.error("Invalid orderIntervalValue");
-      return;
-    }
-
-
-    //deposit validation and conversion
-    const totalAmountDepositString = formData.get("totalAmountDeposit") as string
-
-    let totalAmountDeposit: number;
-    if (/^\d*\.?\d+$/.test(totalAmountDepositString)) {
-      // If the input is a valid float or integer, parse it
-      totalAmountDeposit = parseFloat(totalAmountDepositString);
-    } else {
-      // If the input is not valid, handle it accordingly (display an error message, etc.)
-      console.error("Invalid totalAmountDeposit");
-      return;
-    }
-    
-    const deposit = BigInt(totalAmountDeposit * 10 **9);
-
-    //total value increment validation and conversion
-    const totalValueIncrementString = formData.get("totalValueIncrement") as string
-
-    let totalValueIncrement : number;
-
-    if (/^\d*\.?\d+$/.test(totalValueIncrementString)) {
-      // If the input is a valid float or integer, parse it
-      totalValueIncrement = parseFloat(totalValueIncrementString);
-    } else {
-      // If the input is not valid, handle it accordingly (display an error message, etc.)
-      console.error("Invalid totalValueIncrement");
-      return;
-    }
-
-    const valueIncrement = BigInt(totalValueIncrement * 10 ** 6);
+    const conversionResult = validateAndConvertValues(
+      orderIntervalValueString,
+      totalAmountDepositString,
+      totalValueIncrementString
+    );
 
     const valueAverageData = {
       userPublicKey: wallet?.adapter.publicKey as PublicKey,
       inputToken: new PublicKey(formData.get("inputToken")!),
       outputToken: new PublicKey(formData.get("outputToken")!),
-      orderInterval: BigInt(orderIntervalValue * selectedTimeframeInSec),
-      deposit: deposit,
-      usdcValueIncrement: valueIncrement,
-      startDateTime: BigInt(selectedDateTime.getTime())
+      orderInterval: BigInt(
+        conversionResult!.orderIntervalValue * selectedTimeframeInSec
+      ),
+      deposit: conversionResult!.deposit,
+      usdcValueIncrement: conversionResult!.valueIncrement,
+      startDateTime: BigInt(selectedDateTime.getTime()),
     };
 
-    const {ixs, pda} = await programClient.open(
-      valueAverageData.userPublicKey,
-      valueAverageData.userPublicKey,
-      valueAverageData.inputToken,
-      valueAverageData.outputToken,
-      valueAverageData.orderInterval,
-      valueAverageData.deposit,
-      valueAverageData.usdcValueIncrement,
-      undefined,
-      valueAverageData.startDateTime
-    )
-
-    const tx = new Transaction();
-    tx.add(...ixs);
-
-    if (!connected || wallet === null) {
-      throw new Error('Wallet is not connected');
-    }
-
-    const txsig = await wallet.adapter.sendTransaction(
-      tx,
-      conn,
-      {
-        skipPreflight: true,
-      }
-    )
+    console.log(valueAverageData)
     
-    console.log(txsig)
-
-    const latestBlockHash = await conn.getLatestBlockhash();
-
-    try {
-      await conn.confirmTransaction({
-        blockhash: latestBlockHash.blockhash,
-        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-        signature: txsig,
-      }, 'confirmed')
-      console.log('Transaction confirmed!');
-    } catch(error){
-      console.error('Confirmation failed: ', error);
-    }
+    await openValueAverage(valueAverageData, wallet!);
+   
   };
 
   return (
     <div className="flex flex-col items-center justify-center bg-base-100 h-screen">
       <div className="flex flex-col justify-center items-center bg-neutral rounded-lg w-1/3 h-full my-10 shadow-md">
         <form
-          onSubmit={openValueAverage}
+          onSubmit={handleSubmit}
           className="form-control w-full h-full px-2"
         >
           {/* input token field */}
