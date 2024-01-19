@@ -1,9 +1,13 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useUnifiedWallet } from "@jup-ag/wallet-adapter";
 import { PublicKey } from "@solana/web3.js";
 import { TuiDateTimePicker } from "nextjs-tui-date-picker";
 import { openValueAverage, validateAndConvertValues } from "@/lib/helpers";
+import { ValueAverageProgram } from "solana-value-average";
+import { conn } from "@/lib/constants";
+
+const programClient = new ValueAverageProgram(conn, "mainnet-beta");
 
 const HomePage: React.FC = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState("minute");
@@ -11,6 +15,17 @@ const HomePage: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedDateTime, setSelectedDateTime] = useState(new Date());
   const { wallet, connected } = useUnifiedWallet();
+
+  useEffect(() => {
+    const fetchUserValueAvg = async () => {
+      if (connected && wallet){
+        const userValueAvg = await programClient.getCurrentByUser(wallet.adapter.publicKey!)
+        console.log(userValueAvg[0].account.inputMint.toBase58())
+      }
+    }
+
+    fetchUserValueAvg();
+  }, [connected, wallet])
 
   const handleTimeframeSelect = (timeframe: string) => {
     switch (timeframe) {

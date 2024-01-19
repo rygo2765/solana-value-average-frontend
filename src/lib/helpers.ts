@@ -1,7 +1,7 @@
 import { ValueAverageProgram } from "solana-value-average";
 import { conn } from "./constants";
 import { PublicKey, Transaction } from "@solana/web3.js";
-import { Wallet, useUnifiedWallet } from "@jup-ag/wallet-adapter";
+import { Wallet, } from "@jup-ag/wallet-adapter";
 
 export interface ValueAverageData {
   userPublicKey: PublicKey;
