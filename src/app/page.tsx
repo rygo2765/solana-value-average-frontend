@@ -3,9 +3,14 @@ import React, { useEffect, useState } from "react";
 import { useUnifiedWallet } from "@jup-ag/wallet-adapter";
 import { PublicKey } from "@solana/web3.js";
 import { TuiDateTimePicker } from "nextjs-tui-date-picker";
-import { openValueAverage, validateAndConvertValues } from "@/lib/helpers";
+import {
+  openValueAverage,
+  validateAndConvertValues,
+  getAllTokens,
+} from "@/lib/helpers";
 import { ValueAverageProgram } from "solana-value-average";
 import { conn } from "@/lib/constants";
+import OpenVAOverview from "./components/OpenVAOverview";
 
 const programClient = new ValueAverageProgram(conn, "mainnet-beta");
 
@@ -15,17 +20,27 @@ const HomePage: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedDateTime, setSelectedDateTime] = useState(new Date());
   const { wallet, connected } = useUnifiedWallet();
+  const [userValueAvg, setUserValueAvg] = useState<any[] | null>(null);
 
   useEffect(() => {
     const fetchUserValueAvg = async () => {
-      if (connected && wallet){
-        const userValueAvg = await programClient.getCurrentByUser(wallet.adapter.publicKey!)
-        console.log(userValueAvg[0].account.inputMint.toBase58())
+      if (connected && wallet) {
+        try {
+          const fetchedUserValueAvg = await programClient.getCurrentByUser(
+            wallet.adapter.publicKey!
+          );
+          console.log(fetchedUserValueAvg[0].account);
+          setUserValueAvg(fetchedUserValueAvg);
+          console.log(userValueAvg)
+          // await getAllTokens();
+        } catch (error) {
+          console.error("Error fetching user value average:", error);
+        }
       }
-    }
+    };
 
     fetchUserValueAvg();
-  }, [connected, wallet])
+  }, [connected, wallet]);
 
   const handleTimeframeSelect = (timeframe: string) => {
     switch (timeframe) {
@@ -95,18 +110,17 @@ const HomePage: React.FC = () => {
       startDateTime: BigInt(selectedDateTime.getTime()),
     };
 
-    console.log(valueAverageData)
-    
+    console.log(valueAverageData);
+
     await openValueAverage(valueAverageData, wallet!);
-   
   };
 
   return (
     <div className="flex flex-col items-center justify-center bg-base-100 h-screen">
-      <div className="flex flex-col justify-center items-center bg-neutral rounded-lg w-1/3 h-full my-10 shadow-md">
+      <div className="flex flex-col justify-center items-center bg-neutral rounded-lg w-[460px] h-[568px] my-5 shadow-md">
         <form
           onSubmit={handleSubmit}
-          className="form-control w-full h-full px-2"
+          className="form-control justify-center w-full h-full px-2"
         >
           {/* input token field */}
           <div className="form-control w-full">
@@ -246,6 +260,51 @@ const HomePage: React.FC = () => {
             Submit
           </button>
         </form>
+      </div>
+
+      <div id="displayOpened" className="flex flex-col w-[460px]">
+        <div className="flex flex-row justify-start ">
+          <button className="btn btn-sm mx-2">Active Value Avgs</button>
+          <button className="btn btn-sm mx-2">Past Value Avgs</button>
+        </div>
+
+        <div className="collapse bg-base-200 mt-5">
+          <input type="checkbox" />
+          <div className="collapse-title text-sm font-medium flex flex-row justify-between">
+            <div>Symbol</div>
+            <div>Value</div>
+            <div>Progress</div>
+          </div>
+          <div className="collapse-content">
+            <div role="tablist" className="tabs tabs-bordered w-full">
+              <input
+                type="radio"
+                name="my_tabs_1"
+                role="tab"
+                className="tab"
+                aria-label="Overview"
+              />
+              <div role="tabpanel" className="tab-content p-10 flex flex-col">
+                <div className="flex flex-row justify-between">
+                  {userValueAvg ? (
+                    <OpenVAOverview fetchedUserValueAvg={userValueAvg} />
+                  ) : (
+                    <p>Loading overview data...</p>
+                  )}
+                </div>
+              </div>
+
+              <input
+                type="radio"
+                name="my_tabs_1"
+                role="tab"
+                className="tab"
+                aria-label="Orders"
+              />
+              <div role="tabpanel" className="tab-content p-10"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

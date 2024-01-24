@@ -96,3 +96,10 @@ export function validateAndConvertValues(
     console.error("Invalid Input: ", error);
   }
 }
+
+
+export async function getAllTokens(){
+  const res = await fetch('https://token.jup.ag/all')
+  const tokens = await res.json()
+  console.log(tokens[0])
+}
