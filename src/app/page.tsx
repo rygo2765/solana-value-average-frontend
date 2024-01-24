@@ -29,9 +29,9 @@ const HomePage: React.FC = () => {
           const fetchedUserValueAvg = await programClient.getCurrentByUser(
             wallet.adapter.publicKey!
           );
-          console.log(fetchedUserValueAvg[0].account);
+          // console.log(fetchedUserValueAvg[0].account);
           setUserValueAvg(fetchedUserValueAvg);
-          console.log(userValueAvg)
+          // console.log(userValueAvg)
           // await getAllTokens();
         } catch (error) {
           console.error("Error fetching user value average:", error);
@@ -284,7 +284,7 @@ const HomePage: React.FC = () => {
                 className="tab"
                 aria-label="Overview"
               />
-              <div role="tabpanel" className="tab-content p-10 flex flex-col">
+              <div role="tabpanel" className="tab-content p-5 flex flex-col">
                 <div className="flex flex-row justify-between">
                   {userValueAvg ? (
                     <OpenVAOverview fetchedUserValueAvg={userValueAvg} />
