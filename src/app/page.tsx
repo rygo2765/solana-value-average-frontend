@@ -7,10 +7,13 @@ import {
   openValueAverage,
   validateAndConvertValues,
   getAllTokens,
+  Token,
+  findTokenByAddress,
 } from "@/lib/helpers";
 import { ValueAverageProgram } from "solana-value-average";
 import { conn } from "@/lib/constants";
 import OpenVAOverview from "./components/OpenVAOverview";
+import TokenModal from "./components/TokenModal";
 
 const programClient = new ValueAverageProgram(conn, "mainnet-beta");
 
@@ -21,6 +24,41 @@ const HomePage: React.FC = () => {
   const [selectedDateTime, setSelectedDateTime] = useState(new Date());
   const { wallet, connected } = useUnifiedWallet();
   const [userValueAvg, setUserValueAvg] = useState<any[] | null>(null);
+  const [tokenList, setTokenList] = useState<any[] | null>(null);
+  const [defaultInputToken, setDefaultInputToken] = useState<Token | null>(
+    null
+  );
+  const [selectedInputToken, setSelectedInputToken] = useState<Token | null>(
+    null
+  );
+
+  useEffect(() => {
+    const fetchTokenList = async () => {
+      try {
+        setTokenList(await getAllTokens());
+      } catch (error) {
+        console.error("Error fetching token list: ", error);
+      }
+    };
+
+    fetchTokenList();
+  }, []);
+
+  useEffect(() => {
+    if (tokenList) {
+      const defaultInputToken = findTokenByAddress(
+        tokenList,
+        "So11111111111111111111111111111111111111112"
+      );
+
+      // Ensure that defaultInputToken is not undefined before setting the state
+      if (defaultInputToken) {
+        setDefaultInputToken(defaultInputToken);
+      } else {
+        setDefaultInputToken(null); // Provide a default value in case the token is not found
+      }
+    }
+  }, [tokenList]);
 
   useEffect(() => {
     const fetchUserValueAvg = async () => {
@@ -71,6 +109,10 @@ const HomePage: React.FC = () => {
   const handleDateTimeSelect = (newDateTime: Date): void => {
     const parsedDate = new Date(newDateTime);
     setSelectedDateTime(parsedDate);
+  };
+
+  const handleTokenSelect = (selectedToken: Token) => {
+    setSelectedInputToken(selectedToken);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -127,12 +169,19 @@ const HomePage: React.FC = () => {
             <label className="label" htmlFor="inputToken">
               <span className="label-text">Input Token</span>
             </label>
-            <input
+            {/* <input
               type="text"
               name="inputToken"
               placeholder=""
               className="input input-bordered w-full"
-            />
+            /> */}
+            {defaultInputToken !== null && tokenList && (
+              <TokenModal
+                tokenList={tokenList}
+                onSelectToken={handleTokenSelect}
+                defaultToken={defaultInputToken}
+              />
+            )}
           </div>
 
           {/*output token field */}

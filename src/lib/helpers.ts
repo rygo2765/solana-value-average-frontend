@@ -1,7 +1,7 @@
 import { ValueAverageProgram } from "solana-value-average";
 import { conn } from "./constants";
 import { PublicKey, Transaction } from "@solana/web3.js";
-import { Wallet, } from "@jup-ag/wallet-adapter";
+import { Wallet } from "@jup-ag/wallet-adapter";
 
 export interface ValueAverageData {
   userPublicKey: PublicKey;
@@ -53,7 +53,6 @@ export async function openValueAverage(
       },
       "confirmed"
     );
-
   } catch (error) {
     console.error("Confirmation failed: ", error);
   }
@@ -97,9 +96,26 @@ export function validateAndConvertValues(
   }
 }
 
+//tokens
+export interface Token {
+  address: string;
+  chainId: number;
+  decimals: number;
+  name: string;
+  symbol: string;
+  logoURI: string;
+  tags: string[];
+  extensions: {
+    coingeckoId: string;
+  };
+}
 
-export async function getAllTokens(){
-  const res = await fetch('https://token.jup.ag/all')
-  const tokens = await res.json()
-  console.log(tokens[0])
+export async function getAllTokens(): Promise<Token[]> {
+  const res = await fetch("https://token.jup.ag/all");
+  const tokens: Token[] = await res.json();
+  return tokens;
+}
+
+export function findTokenByAddress(tokens: Token[], address: string): Token | undefined {
+  return tokens.find((token) => token.address === address);
 }
