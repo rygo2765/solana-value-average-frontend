@@ -113,9 +113,49 @@ export interface Token {
 export async function getAllTokens(): Promise<Token[]> {
   const res = await fetch("https://token.jup.ag/all");
   const tokens: Token[] = await res.json();
+
+  let maxNameLength = 0;
+  let tokenWithMaxLength: Token | null = null;
+
+  // Iterate through the tokens
+  tokens.forEach((token) => {
+    const nameLength = token.name.length;
+
+    // Check if the current token's name has a greater length
+    if (nameLength > maxNameLength) {
+      maxNameLength = nameLength;
+      tokenWithMaxLength = token;
+    }
+  });
+
+  console.log("Maximum Name Length:", maxNameLength);
+  console.log("Token with Maximum Name:", tokenWithMaxLength);
+
   return tokens;
 }
 
-export function findTokenByAddress(tokens: Token[], address: string): Token | undefined {
+export function findTokenByAddress(
+  tokens: Token[],
+  address: string
+): Token | undefined {
   return tokens.find((token) => token.address === address);
+}
+
+export function createTokenIndexMap(tokens: Token[]): { [key: string]: Token } {
+  const indexMap: { [key: string]: Token } = {};
+  tokens.forEach((token) => {
+    //index by name
+    indexMap[token.name.toLowerCase()] = token;
+
+    // indexMap[token.address.toLowerCase()] = token;
+  });
+
+  return indexMap;
+}
+
+export function shortenAddress(address:string, length = 4){
+  if (!address) return "";
+  const start = address.slice(0,length);
+  const end = address.slice(-length);
+  return `${start}...${end}`
 }

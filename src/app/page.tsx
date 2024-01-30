@@ -9,13 +9,16 @@ import {
   getAllTokens,
   Token,
   findTokenByAddress,
+  createTokenIndexMap
 } from "@/lib/helpers";
 import { ValueAverageProgram } from "solana-value-average";
-import { conn } from "@/lib/constants";
+import { conn, usdcInfo, solInfo } from "@/lib/constants";
 import OpenVAOverview from "./components/OpenVAOverview";
 import TokenModal from "./components/TokenModal";
 
 const programClient = new ValueAverageProgram(conn, "mainnet-beta");
+const defaultInToken = usdcInfo;
+const defaultOutToken = solInfo;
 
 const HomePage: React.FC = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState("minute");
@@ -24,18 +27,23 @@ const HomePage: React.FC = () => {
   const [selectedDateTime, setSelectedDateTime] = useState(new Date());
   const { wallet, connected } = useUnifiedWallet();
   const [userValueAvg, setUserValueAvg] = useState<any[] | null>(null);
+
+
   const [tokenList, setTokenList] = useState<any[] | null>(null);
-  const [defaultInputToken, setDefaultInputToken] = useState<Token | null>(
-    null
-  );
+  const [tokensIndexMap, setTokensIndexMap] = useState<{ [key: string]: Token }>({});
   const [selectedInputToken, setSelectedInputToken] = useState<Token | null>(
     null
   );
 
+  //Hooks
   useEffect(() => {
     const fetchTokenList = async () => {
       try {
-        setTokenList(await getAllTokens());
+        const tokens = await getAllTokens()
+        setTokenList(tokens);
+
+        const tokensIndexMap = createTokenIndexMap(tokens);
+         setTokensIndexMap(tokensIndexMap);
       } catch (error) {
         console.error("Error fetching token list: ", error);
       }
@@ -45,25 +53,10 @@ const HomePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (tokenList) {
-      const defaultInputToken = findTokenByAddress(
-        tokenList,
-        "So11111111111111111111111111111111111111112"
-      );
-
-      // Ensure that defaultInputToken is not undefined before setting the state
-      if (defaultInputToken) {
-        setDefaultInputToken(defaultInputToken);
-      } else {
-        setDefaultInputToken(null); // Provide a default value in case the token is not found
-      }
-    }
-  }, [tokenList]);
-
-  useEffect(() => {
     const fetchUserValueAvg = async () => {
       if (connected && wallet) {
         try {
+          console.log(tokensIndexMap)
           const fetchedUserValueAvg = await programClient.getCurrentByUser(
             wallet.adapter.publicKey!
           );
@@ -80,6 +73,8 @@ const HomePage: React.FC = () => {
     fetchUserValueAvg();
   }, [connected, wallet]);
 
+
+  //Event Handlers
   const handleTimeframeSelect = (timeframe: string) => {
     switch (timeframe) {
       case "minute":
@@ -169,17 +164,12 @@ const HomePage: React.FC = () => {
             <label className="label" htmlFor="inputToken">
               <span className="label-text">Input Token</span>
             </label>
-            {/* <input
-              type="text"
-              name="inputToken"
-              placeholder=""
-              className="input input-bordered w-full"
-            /> */}
-            {defaultInputToken !== null && tokenList && (
+            {tokenList && (
               <TokenModal
                 tokenList={tokenList}
                 onSelectToken={handleTokenSelect}
-                defaultToken={defaultInputToken}
+                defaultToken={defaultInToken}
+                tokensIndexMap={tokensIndexMap}
               />
             )}
           </div>
