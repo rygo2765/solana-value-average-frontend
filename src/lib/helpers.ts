@@ -44,7 +44,7 @@ export async function openValueAverage(
     }
 
     const latestBlockHash = await conn.getLatestBlockhash();
-
+    
     await conn.confirmTransaction(
       {
         blockhash: latestBlockHash.blockhash,
@@ -53,6 +53,7 @@ export async function openValueAverage(
       },
       "confirmed"
     );
+
   } catch (error) {
     console.error("Confirmation failed: ", error);
   }
@@ -61,7 +62,8 @@ export async function openValueAverage(
 export function validateAndConvertValues(
   orderIntervalValueString: string,
   totalAmountDepositString: string,
-  totalValueIncrementString: string
+  totalValueIncrementString: string,
+  inTokenDecimals: number
 ) {
   try {
     let totalAmountDeposit: number = 0;
@@ -83,8 +85,8 @@ export function validateAndConvertValues(
       totalValueIncrement = parseFloat(totalValueIncrementString);
     }
 
-    const deposit = BigInt(totalAmountDeposit * 10 ** 9); //to be changed
-    const valueIncrement = BigInt(totalValueIncrement * 10 ** 6); //in USDC
+    const deposit = BigInt(totalAmountDeposit * 10 ** inTokenDecimals); //to be changed
+    const valueIncrement = BigInt(totalValueIncrement * 10 ** 9); //in USDC
 
     return {
       orderIntervalValue,
@@ -141,21 +143,21 @@ export function findTokenByAddress(
   return tokens.find((token) => token.address === address);
 }
 
-export function createTokenIndexMap(tokens: Token[]): { [key: string]: Token } {
-  const indexMap: { [key: string]: Token } = {};
-  tokens.forEach((token) => {
-    //index by name
-    indexMap[token.name.toLowerCase()] = token;
+// export function createTokenIndexMap(tokens: Token[]): { [key: string]: Token } {
+//   const indexMap: { [key: string]: Token } = {};
+//   tokens.forEach((token) => {
+//     //index by name
+//     indexMap[token.name.toLowerCase()] = token;
 
-    // indexMap[token.address.toLowerCase()] = token;
-  });
+//     // indexMap[token.address.toLowerCase()] = token;
+//   });
 
-  return indexMap;
-}
+//   return indexMap;
+// }
 
-export function shortenAddress(address:string, length = 4){
+export function shortenAddress(address: string, length = 4) {
   if (!address) return "";
-  const start = address.slice(0,length);
+  const start = address.slice(0, length);
   const end = address.slice(-length);
-  return `${start}...${end}`
+  return `${start}...${end}`;
 }

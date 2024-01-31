@@ -8,8 +8,6 @@ import {
   validateAndConvertValues,
   getAllTokens,
   Token,
-  findTokenByAddress,
-  createTokenIndexMap
 } from "@/lib/helpers";
 import { ValueAverageProgram } from "solana-value-average";
 import { conn, usdcInfo, solInfo } from "@/lib/constants";
@@ -30,10 +28,10 @@ const HomePage: React.FC = () => {
 
 
   const [tokenList, setTokenList] = useState<any[] | null>(null);
-  const [tokensIndexMap, setTokensIndexMap] = useState<{ [key: string]: Token }>({});
-  const [selectedInputToken, setSelectedInputToken] = useState<Token | null>(
-    null
+  const [selectedInToken, setSelectedInToken] = useState<Token>(
+    defaultInToken
   );
+  const [selectedOutToken, setSelectedOutToken] = useState<Token>(defaultOutToken);
 
   //Hooks
   useEffect(() => {
@@ -42,8 +40,6 @@ const HomePage: React.FC = () => {
         const tokens = await getAllTokens()
         setTokenList(tokens);
 
-        const tokensIndexMap = createTokenIndexMap(tokens);
-         setTokensIndexMap(tokensIndexMap);
       } catch (error) {
         console.error("Error fetching token list: ", error);
       }
@@ -56,14 +52,10 @@ const HomePage: React.FC = () => {
     const fetchUserValueAvg = async () => {
       if (connected && wallet) {
         try {
-          console.log(tokensIndexMap)
           const fetchedUserValueAvg = await programClient.getCurrentByUser(
             wallet.adapter.publicKey!
           );
-          // console.log(fetchedUserValueAvg[0].account);
           setUserValueAvg(fetchedUserValueAvg);
-          // console.log(userValueAvg)
-          // await getAllTokens();
         } catch (error) {
           console.error("Error fetching user value average:", error);
         }
@@ -106,12 +98,19 @@ const HomePage: React.FC = () => {
     setSelectedDateTime(parsedDate);
   };
 
-  const handleTokenSelect = (selectedToken: Token) => {
-    setSelectedInputToken(selectedToken);
+  const handleInTokenSelect = (selectedToken: Token) => {
+    setSelectedInToken(selectedToken);
   };
+
+  const handleOutTokenSelect = (selectedToken: Token) => {
+    setSelectedOutToken(selectedToken);
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    console.log(selectedInToken.decimals)
+    console.log(selectedOutToken.decimals)
 
     if (!connected) {
       throw new Error("Wallet is not connected.");
@@ -132,13 +131,14 @@ const HomePage: React.FC = () => {
     const conversionResult = validateAndConvertValues(
       orderIntervalValueString,
       totalAmountDepositString,
-      totalValueIncrementString
+      totalValueIncrementString,
+      selectedInToken.decimals,
     );
 
     const valueAverageData = {
       userPublicKey: wallet?.adapter.publicKey as PublicKey,
-      inputToken: new PublicKey(formData.get("inputToken")!),
-      outputToken: new PublicKey(formData.get("outputToken")!),
+      inputToken: new PublicKey(selectedInToken.address),
+      outputToken: new PublicKey(selectedOutToken.address),
       orderInterval: BigInt(
         conversionResult!.orderIntervalValue * selectedTimeframeInSec
       ),
@@ -153,12 +153,14 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center bg-base-100 h-screen">
-      <div className="flex flex-col justify-center items-center bg-neutral rounded-lg w-[460px] h-[568px] my-5 shadow-md">
+    <div className="flex flex-col items-center justify-center bg-base-100 h-full">
+      <div className="flex flex-col justify-center items-center bg-neutral rounded-lg w-[460px] h-[480px] my-5 shadow-md">
         <form
           onSubmit={handleSubmit}
           className="form-control justify-center w-full h-full px-2"
         >
+
+          <div className="flex flex-row justify-between items-center">
           {/* input token field */}
           <div className="form-control w-full">
             <label className="label" htmlFor="inputToken">
@@ -167,24 +169,25 @@ const HomePage: React.FC = () => {
             {tokenList && (
               <TokenModal
                 tokenList={tokenList}
-                onSelectToken={handleTokenSelect}
+                onSelectToken={handleInTokenSelect}
                 defaultToken={defaultInToken}
-                tokensIndexMap={tokensIndexMap}
               />
             )}
           </div>
 
           {/*output token field */}
-          <div className="form-control w-full mt-2">
-            <label className="label-text">
+          <div className="form-control w-full ml-2">
+            <label className="label" htmlFor="outputToken">
               <span className="label-text">Output Token</span>
             </label>
-            <input
-              type="text"
-              name="outputToken"
-              placeholder=""
-              className="input input-bordered w-full"
-            />
+            {tokenList && (
+              <TokenModal
+                tokenList={tokenList}
+                onSelectToken={handleOutTokenSelect}
+                defaultToken={defaultOutToken}
+              />
+            )}
+          </div>
           </div>
 
           {/* Order Interval Input */}

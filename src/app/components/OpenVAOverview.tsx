@@ -31,9 +31,6 @@ const OpenVAOverview: React.FC<{
     return <p>Loading data...</p>;
   }
 
-  console.log(
-    parseInt(fetchedUserValueAvg[0].account.inLeft.toString()) / 10 ** 9
-  );
 
   return (
     <div className="w-full">

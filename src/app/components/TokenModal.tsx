@@ -9,7 +9,6 @@ import React, {
   useRef,
   useEffect,
   MouseEventHandler,
-  useMemo,
   ChangeEventHandler,
 } from "react";
 import { FixedSizeList } from "react-window";
@@ -18,14 +17,12 @@ interface TokenModalProps {
   tokenList: Token[];
   onSelectToken: (token: Token) => void;
   defaultToken?: Token;
-  tokensIndexMap: { [key: string]: Token };
 }
 
 const TokenModal: React.FC<TokenModalProps> = ({
   tokenList,
   onSelectToken,
   defaultToken,
-  tokensIndexMap,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedToken, setSelectedToken] = useState<Token | null>(
@@ -46,16 +43,15 @@ const TokenModal: React.FC<TokenModalProps> = ({
     setIsOpen(false);
   };
 
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Escape" && isOpen) {
-      event.preventDefault();
-      handleClose();
-    }
-  };
-
   const handleSearchChange: ChangeEventHandler<HTMLInputElement> = (event) => {
     event.preventDefault();
     setSearchTerm(event.target.value);
+  };
+
+  const handleTokenSelection = (token: Token) => {
+    setSelectedToken(token);
+    onSelectToken(token);
+    handleClose();
   };
 
   useEffect(() => {
@@ -63,10 +59,8 @@ const TokenModal: React.FC<TokenModalProps> = ({
       const searchTermLower = searchTerm.toLowerCase().trim();
 
       if (!searchTermLower) {
-        // If the search term is empty, display all tokens
         setResults(tokenList);
       } else {
-        // If there's a search term
         const filteredResults = tokenList.filter(
           (token) =>
             token.name.toLowerCase().includes(searchTermLower) ||
@@ -80,30 +74,23 @@ const TokenModal: React.FC<TokenModalProps> = ({
     search();
   }, [searchTerm, tokenList]);
 
-  const handleTokenSelection = (token: Token) => {
-    setSelectedToken(token);
-    onSelectToken(token);
-    handleClose();
-  };
-
   useEffect(() => {
-    // Add event listener for ESC key press
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && isOpen) {
+        event.preventDefault();
+        handleClose();
+      }
+    };
+
     modalRef.current?.addEventListener("keydown", handleKeyDown);
 
-    // Cleanup function to remove event listener
     return () =>
       modalRef.current?.removeEventListener("keydown", handleKeyDown);
   }, [isOpen]);
 
-  // useEffect(() => {
-  //   const initialToken = defaultToken!;
-  //   setSelectedToken(initialToken);
-  // }),
-  //   [tokenList, defaultToken];
-
   return (
     <div>
-      <button className="btn flex items-center" onClick={handleOpen}>
+      <button className="btn flex items-center w-full" onClick={handleOpen}>
         {selectedToken && (
           <>
             <img
@@ -131,7 +118,7 @@ const TokenModal: React.FC<TokenModalProps> = ({
             className="w-full h-10 p-2 rounded-md"
           />
           <FixedSizeList
-            height={897} // Adjust height as needed
+            height={7 * 55} // Adjust height as needed
             width={448} // Adjust width as needed
             itemSize={55} // Adjust itemSize based on token list item height
             itemCount={results.length}
@@ -174,6 +161,9 @@ const TokenModal: React.FC<TokenModalProps> = ({
             )}
           </FixedSizeList>
         </div>
+        <form method="dialog" className="modal-backdrop">
+          <button>close</button>
+        </form>
       </dialog>
     </div>
   );
