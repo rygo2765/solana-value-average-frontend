@@ -1,9 +1,22 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useUnifiedWallet } from "@jup-ag/wallet-adapter";
 import { PublicKey } from "@solana/web3.js";
 import { TuiDateTimePicker } from "nextjs-tui-date-picker";
-import { openValueAverage, validateAndConvertValues } from "@/lib/helpers";
+import {
+  openValueAverage,
+  validateAndConvertValues,
+  getAllTokens,
+  Token,
+} from "@/lib/helpers";
+import { ValueAverageProgram } from "solana-value-average";
+import { conn, usdcInfo, solInfo } from "@/lib/constants";
+import OpenVAOverview from "./components/OpenVAOverview";
+import TokenModal from "./components/TokenModal";
+
+const programClient = new ValueAverageProgram(conn, "mainnet-beta");
+const defaultInToken = usdcInfo;
+const defaultOutToken = solInfo;
 
 const HomePage: React.FC = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState("minute");
@@ -11,7 +24,45 @@ const HomePage: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedDateTime, setSelectedDateTime] = useState(new Date());
   const { wallet, connected } = useUnifiedWallet();
+  const [userValueAvg, setUserValueAvg] = useState<any[] | null>(null);
 
+  const [tokenList, setTokenList] = useState<any[] | null>(null);
+  const [selectedInToken, setSelectedInToken] = useState<Token>(defaultInToken);
+  const [selectedOutToken, setSelectedOutToken] =
+    useState<Token>(defaultOutToken);
+
+  //Hooks
+  useEffect(() => {
+    const fetchTokenList = async () => {
+      try {
+        const tokens = await getAllTokens();
+        setTokenList(tokens);
+      } catch (error) {
+        console.error("Error fetching token list: ", error);
+      }
+    };
+
+    fetchTokenList();
+  }, []);
+
+  useEffect(() => {
+    const fetchUserValueAvg = async () => {
+      if (connected && wallet) {
+        try {
+          const fetchedUserValueAvg = await programClient.getCurrentByUser(
+            wallet.adapter.publicKey!
+          );
+          setUserValueAvg(fetchedUserValueAvg);
+        } catch (error) {
+          console.error("Error fetching user value average:", error);
+        }
+      }
+    };
+
+    fetchUserValueAvg();
+  }, [connected, wallet]);
+
+  //Event Handlers
   const handleTimeframeSelect = (timeframe: string) => {
     switch (timeframe) {
       case "minute":
@@ -43,8 +94,19 @@ const HomePage: React.FC = () => {
     setSelectedDateTime(parsedDate);
   };
 
+  const handleInTokenSelect = (selectedToken: Token) => {
+    setSelectedInToken(selectedToken);
+  };
+
+  const handleOutTokenSelect = (selectedToken: Token) => {
+    setSelectedOutToken(selectedToken);
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    console.log(selectedInToken.decimals);
+    console.log(selectedOutToken.decimals);
 
     if (!connected) {
       throw new Error("Wallet is not connected.");
@@ -65,13 +127,14 @@ const HomePage: React.FC = () => {
     const conversionResult = validateAndConvertValues(
       orderIntervalValueString,
       totalAmountDepositString,
-      totalValueIncrementString
+      totalValueIncrementString,
+      selectedInToken.decimals
     );
 
     const valueAverageData = {
       userPublicKey: wallet?.adapter.publicKey as PublicKey,
-      inputToken: new PublicKey(formData.get("inputToken")!),
-      outputToken: new PublicKey(formData.get("outputToken")!),
+      inputToken: new PublicKey(selectedInToken.address),
+      outputToken: new PublicKey(selectedOutToken.address),
       orderInterval: BigInt(
         conversionResult!.orderIntervalValue * selectedTimeframeInSec
       ),
@@ -80,43 +143,46 @@ const HomePage: React.FC = () => {
       startDateTime: BigInt(selectedDateTime.getTime()),
     };
 
-    console.log(valueAverageData)
-    
+    console.log(valueAverageData);
+
     await openValueAverage(valueAverageData, wallet!);
-   
   };
 
   return (
-    <div className="flex flex-col items-center justify-center bg-base-100 h-screen">
-      <div className="flex flex-col justify-center items-center bg-neutral rounded-lg w-1/3 h-full my-10 shadow-md">
+    <div className="flex flex-col items-center justify-center bg-base-100 h-full">
+      <div className="flex flex-col justify-center items-center bg-neutral rounded-lg w-[460px] h-[480px] my-5 shadow-md">
         <form
           onSubmit={handleSubmit}
-          className="form-control w-full h-full px-2"
+          className="form-control justify-center w-full h-full px-2"
         >
-          {/* input token field */}
-          <div className="form-control w-full">
-            <label className="label" htmlFor="inputToken">
-              <span className="label-text">Input Token</span>
-            </label>
-            <input
-              type="text"
-              name="inputToken"
-              placeholder=""
-              className="input input-bordered w-full"
-            />
-          </div>
+          <div className="flex flex-row justify-between items-center">
+            {/* input token field */}
+            <div className="form-control w-full">
+              <label className="label" htmlFor="inputToken">
+                <span className="label-text">Input Token</span>
+              </label>
+              {tokenList && (
+                <TokenModal
+                  tokenList={tokenList}
+                  onSelectToken={handleInTokenSelect}
+                  defaultToken={defaultInToken}
+                />
+              )}
+            </div>
 
-          {/*output token field */}
-          <div className="form-control w-full mt-2">
-            <label className="label-text">
-              <span className="label-text">Output Token</span>
-            </label>
-            <input
-              type="text"
-              name="outputToken"
-              placeholder=""
-              className="input input-bordered w-full"
-            />
+            {/*output token field */}
+            <div className="form-control w-full ml-2">
+              <label className="label" htmlFor="outputToken">
+                <span className="label-text">Output Token</span>
+              </label>
+              {tokenList && (
+                <TokenModal
+                  tokenList={tokenList}
+                  onSelectToken={handleOutTokenSelect}
+                  defaultToken={defaultOutToken}
+                />
+              )}
+            </div>
           </div>
 
           {/* Order Interval Input */}
@@ -232,6 +298,21 @@ const HomePage: React.FC = () => {
           </button>
         </form>
       </div>
+
+      {connected ? (
+        <div id="displayOpened" className="flex flex-col w-[460px]">
+          <div className="flex flex-row justify-start ">
+            <button className="btn btn-sm mx-2">Active Value Avgs</button>
+            <button className="btn btn-sm mx-2">Past Value Avgs</button>
+          </div>
+
+          {userValueAvg && tokenList ? (
+            <OpenVAOverview fetchedUserValueAvg={userValueAvg} tokenList={tokenList}/>
+          ) : (
+            null
+          )}
+        </div>
+      ) : null}
     </div>
   );
 };

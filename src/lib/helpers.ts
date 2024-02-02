@@ -1,7 +1,7 @@
 import { ValueAverageProgram } from "solana-value-average";
 import { conn } from "./constants";
 import { PublicKey, Transaction } from "@solana/web3.js";
-import { Wallet, useUnifiedWallet } from "@jup-ag/wallet-adapter";
+import { Wallet } from "@jup-ag/wallet-adapter";
 
 export interface ValueAverageData {
   userPublicKey: PublicKey;
@@ -44,7 +44,7 @@ export async function openValueAverage(
     }
 
     const latestBlockHash = await conn.getLatestBlockhash();
-
+    
     await conn.confirmTransaction(
       {
         blockhash: latestBlockHash.blockhash,
@@ -62,7 +62,8 @@ export async function openValueAverage(
 export function validateAndConvertValues(
   orderIntervalValueString: string,
   totalAmountDepositString: string,
-  totalValueIncrementString: string
+  totalValueIncrementString: string,
+  inTokenDecimals: number
 ) {
   try {
     let totalAmountDeposit: number = 0;
@@ -84,8 +85,8 @@ export function validateAndConvertValues(
       totalValueIncrement = parseFloat(totalValueIncrementString);
     }
 
-    const deposit = BigInt(totalAmountDeposit * 10 ** 9); //to be changed
-    const valueIncrement = BigInt(totalValueIncrement * 10 ** 6); //in USDC
+    const deposit = BigInt(totalAmountDeposit * 10 ** inTokenDecimals); //to be changed
+    const valueIncrement = BigInt(totalValueIncrement * 10 ** 9); //in USDC
 
     return {
       orderIntervalValue,
@@ -95,4 +96,68 @@ export function validateAndConvertValues(
   } catch (error) {
     console.error("Invalid Input: ", error);
   }
+}
+
+//tokens
+export interface Token {
+  address: string;
+  chainId: number;
+  decimals: number;
+  name: string;
+  symbol: string;
+  logoURI: string;
+  tags: string[];
+  extensions: {
+    coingeckoId: string;
+  };
+}
+
+export async function getAllTokens(): Promise<Token[]> {
+  const res = await fetch("https://token.jup.ag/all");
+  const tokens: Token[] = await res.json();
+
+  let maxNameLength = 0;
+  let tokenWithMaxLength: Token | null = null;
+
+  // Iterate through the tokens
+  tokens.forEach((token) => {
+    const nameLength = token.name.length;
+
+    // Check if the current token's name has a greater length
+    if (nameLength > maxNameLength) {
+      maxNameLength = nameLength;
+      tokenWithMaxLength = token;
+    }
+  });
+
+  console.log("Maximum Name Length:", maxNameLength);
+  console.log("Token with Maximum Name:", tokenWithMaxLength);
+
+  return tokens;
+}
+
+export function findTokenByAddress(
+  tokens: Token[],
+  address: string
+): Token | undefined {
+  return tokens.find((token) => token.address === address);
+}
+
+// export function createTokenIndexMap(tokens: Token[]): { [key: string]: Token } {
+//   const indexMap: { [key: string]: Token } = {};
+//   tokens.forEach((token) => {
+//     //index by name
+//     indexMap[token.name.toLowerCase()] = token;
+
+//     // indexMap[token.address.toLowerCase()] = token;
+//   });
+
+//   return indexMap;
+// }
+
+export function shortenAddress(address: string, length = 4) {
+  if (!address) return "";
+  const start = address.slice(0, length);
+  const end = address.slice(-length);
+  return `${start}...${end}`;
 }
