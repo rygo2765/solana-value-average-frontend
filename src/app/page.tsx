@@ -26,20 +26,17 @@ const HomePage: React.FC = () => {
   const { wallet, connected } = useUnifiedWallet();
   const [userValueAvg, setUserValueAvg] = useState<any[] | null>(null);
 
-
   const [tokenList, setTokenList] = useState<any[] | null>(null);
-  const [selectedInToken, setSelectedInToken] = useState<Token>(
-    defaultInToken
-  );
-  const [selectedOutToken, setSelectedOutToken] = useState<Token>(defaultOutToken);
+  const [selectedInToken, setSelectedInToken] = useState<Token>(defaultInToken);
+  const [selectedOutToken, setSelectedOutToken] =
+    useState<Token>(defaultOutToken);
 
   //Hooks
   useEffect(() => {
     const fetchTokenList = async () => {
       try {
-        const tokens = await getAllTokens()
+        const tokens = await getAllTokens();
         setTokenList(tokens);
-
       } catch (error) {
         console.error("Error fetching token list: ", error);
       }
@@ -64,7 +61,6 @@ const HomePage: React.FC = () => {
 
     fetchUserValueAvg();
   }, [connected, wallet]);
-
 
   //Event Handlers
   const handleTimeframeSelect = (timeframe: string) => {
@@ -104,13 +100,13 @@ const HomePage: React.FC = () => {
 
   const handleOutTokenSelect = (selectedToken: Token) => {
     setSelectedOutToken(selectedToken);
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    console.log(selectedInToken.decimals)
-    console.log(selectedOutToken.decimals)
+    console.log(selectedInToken.decimals);
+    console.log(selectedOutToken.decimals);
 
     if (!connected) {
       throw new Error("Wallet is not connected.");
@@ -132,7 +128,7 @@ const HomePage: React.FC = () => {
       orderIntervalValueString,
       totalAmountDepositString,
       totalValueIncrementString,
-      selectedInToken.decimals,
+      selectedInToken.decimals
     );
 
     const valueAverageData = {
@@ -159,35 +155,34 @@ const HomePage: React.FC = () => {
           onSubmit={handleSubmit}
           className="form-control justify-center w-full h-full px-2"
         >
-
           <div className="flex flex-row justify-between items-center">
-          {/* input token field */}
-          <div className="form-control w-full">
-            <label className="label" htmlFor="inputToken">
-              <span className="label-text">Input Token</span>
-            </label>
-            {tokenList && (
-              <TokenModal
-                tokenList={tokenList}
-                onSelectToken={handleInTokenSelect}
-                defaultToken={defaultInToken}
-              />
-            )}
-          </div>
+            {/* input token field */}
+            <div className="form-control w-full">
+              <label className="label" htmlFor="inputToken">
+                <span className="label-text">Input Token</span>
+              </label>
+              {tokenList && (
+                <TokenModal
+                  tokenList={tokenList}
+                  onSelectToken={handleInTokenSelect}
+                  defaultToken={defaultInToken}
+                />
+              )}
+            </div>
 
-          {/*output token field */}
-          <div className="form-control w-full ml-2">
-            <label className="label" htmlFor="outputToken">
-              <span className="label-text">Output Token</span>
-            </label>
-            {tokenList && (
-              <TokenModal
-                tokenList={tokenList}
-                onSelectToken={handleOutTokenSelect}
-                defaultToken={defaultOutToken}
-              />
-            )}
-          </div>
+            {/*output token field */}
+            <div className="form-control w-full ml-2">
+              <label className="label" htmlFor="outputToken">
+                <span className="label-text">Output Token</span>
+              </label>
+              {tokenList && (
+                <TokenModal
+                  tokenList={tokenList}
+                  onSelectToken={handleOutTokenSelect}
+                  defaultToken={defaultOutToken}
+                />
+              )}
+            </div>
           </div>
 
           {/* Order Interval Input */}
@@ -304,50 +299,20 @@ const HomePage: React.FC = () => {
         </form>
       </div>
 
-      <div id="displayOpened" className="flex flex-col w-[460px]">
-        <div className="flex flex-row justify-start ">
-          <button className="btn btn-sm mx-2">Active Value Avgs</button>
-          <button className="btn btn-sm mx-2">Past Value Avgs</button>
-        </div>
-
-        <div className="collapse bg-base-200 mt-5">
-          <input type="checkbox" />
-          <div className="collapse-title text-sm font-medium flex flex-row justify-between">
-            <div>Symbol</div>
-            <div>Value</div>
-            <div>Progress</div>
+      {connected ? (
+        <div id="displayOpened" className="flex flex-col w-[460px]">
+          <div className="flex flex-row justify-start ">
+            <button className="btn btn-sm mx-2">Active Value Avgs</button>
+            <button className="btn btn-sm mx-2">Past Value Avgs</button>
           </div>
-          <div className="collapse-content">
-            <div role="tablist" className="tabs tabs-bordered w-full">
-              <input
-                type="radio"
-                name="my_tabs_1"
-                role="tab"
-                className="tab"
-                aria-label="Overview"
-              />
-              <div role="tabpanel" className="tab-content p-5 flex flex-col">
-                <div className="flex flex-row justify-between">
-                  {userValueAvg ? (
-                    <OpenVAOverview fetchedUserValueAvg={userValueAvg} />
-                  ) : (
-                    <p>Loading overview data...</p>
-                  )}
-                </div>
-              </div>
 
-              <input
-                type="radio"
-                name="my_tabs_1"
-                role="tab"
-                className="tab"
-                aria-label="Orders"
-              />
-              <div role="tabpanel" className="tab-content p-10"></div>
-            </div>
-          </div>
+          {userValueAvg && tokenList ? (
+            <OpenVAOverview fetchedUserValueAvg={userValueAvg} tokenList={tokenList}/>
+          ) : (
+            null
+          )}
         </div>
-      </div>
+      ) : null}
     </div>
   );
 };
