@@ -1,6 +1,7 @@
 "use client";
 import { PublicKey } from "@solana/web3.js";
 import { Token } from "@/lib/helpers";
+import { useState } from "react";
 
 interface UserValueAvg {
   idx: BigInt;
@@ -37,10 +38,43 @@ const getTokenData = (
   return tokenList.find((token) => token.address === publicKey.toBase58());
 };
 
+const formatTimeInterval = (seconds: number) => {
+  const minute = 60;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const week = 7 * day;
+  const month = 30 * day;
+
+  if (seconds < minute) {
+    return `${seconds} second${seconds !== 1 ? "s" : ""}`;
+  } else if (seconds < hour) {
+    const minutes = Math.floor(seconds / minute);
+    return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
+  } else if (seconds < day) {
+    const hours = Math.floor(seconds / hour);
+    return `${hours} hour${hours !== 1 ? "s" : ""}`;
+  } else if (seconds < week) {
+    const days = Math.floor(seconds / day);
+    return `${days} day${days !== 1 ? "s" : ""}`;
+  } else if (seconds < month) {
+    const weeks = Math.floor(seconds / week);
+    return `${weeks} week${weeks !== 1 ? "s" : ""}`;
+  } else {
+    const months = Math.floor(seconds / month);
+    return `${months} month${months !== 1 ? "s" : ""}`;
+  }
+};
+
 const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
   fetchedUserValueAvg,
   tokenList,
 }) => {
+  const [activeTab, setActiveTab] = useState("Overview");
+
+  const toggleTab = (tabName: string) => {
+    setActiveTab(tabName);
+  };
+
   if (!fetchedUserValueAvg) {
     return <p>Loading data...</p>;
   }
@@ -94,7 +128,10 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                   </p>
                 </div>
                 <div className="flex flex- text-white font-bold">
-                  <p>{parseInt(userData.account.inDeposited.toString()) / 10 ** inputTokenData!.decimals}</p>
+                  <p>
+                    {parseInt(userData.account.inDeposited.toString()) /
+                      10 ** inputTokenData!.decimals}
+                  </p>
                   <p className="ml-2">{inputTokenData!.symbol}</p>
                 </div>
               </div>
@@ -102,132 +139,152 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                 <div role="tablist" className="tabs tabs-bordered w-full">
                   <input
                     type="radio"
-                    name="my_tabs_1"
+                    name={`user_tabs_${index}`}
                     role="tab"
                     className="tab"
                     aria-label="Overview"
+                    checked={activeTab === "Overview"}
+                    onChange={() => toggleTab("Overview")}
                   />
-                  <div
-                    role="tabpanel"
-                    className="tab-content p-5 flex flex-col"
-                  >
-                    <div className="flex flex-col text-xs">
-                      <div className="flex flex-col bg-slate-600 w-full p-2 rounded">
-                        <div className="flex flex-row justify-between">
-                          <p>VA {inputTokenData!.symbol} balance </p>
+                  {activeTab === "Overview" && (
+                    <div
+                      role="tabpanel"
+                      className="tab-content p-5 flex flex-col"
+                    >
+                      <div className="flex flex-col text-xs">
+                        <div className="flex flex-col bg-slate-600 w-full p-2 rounded">
+                          <div className="flex flex-row justify-between">
+                            <p>VA {inputTokenData!.symbol} balance </p>
+                            <p>
+                              {parseFloat(userData.account.inLeft.toString()) /
+                                10 ** inputTokenData!.decimals}{" "}
+                              {inputTokenData!.symbol}
+                            </p>
+                          </div>
+                          <div className="flex flex-row justify-between">
+                            <p>VA {outputTokenData!.symbol} balance </p>
+                            <p>
+                              {parseFloat(
+                                userData.account.outReceived.toString()
+                              ) /
+                                10 ** outputTokenData!.decimals}{" "}
+                              {outputTokenData!.symbol}
+                            </p>
+                          </div>
+                          <div className="flex flex-row justify-between">
+                            <p>Amount withdrawn</p>
+                            <p>
+                              {parseFloat(
+                                userData.account.outWithdrawn.toString()
+                              ) /
+                                10 ** outputTokenData!.decimals}{" "}
+                              {outputTokenData!.symbol}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-row justify-between mt-2">
+                          <p>Total Deposited</p>
                           <p>
-                            {parseFloat(userData.account.inLeft.toString()) /
+                            {parseFloat(
+                              userData.account.inDeposited.toString()
+                            ) /
                               10 ** inputTokenData!.decimals}{" "}
                             {inputTokenData!.symbol}
                           </p>
                         </div>
-                        <div className="flex flex-row justify-between">
-                          <p>VA {outputTokenData!.symbol} balance </p>
+
+                        <div className="flex flex-row justify-between mt-1">
+                          <p>Total Spent</p>
                           <p>
-                            {parseFloat(userData.account.outReceived.toString()) /
-                              10 ** outputTokenData!.decimals}{" "}
-                            {outputTokenData!.symbol}
+                            {parseFloat(userData.account.inUsed.toString()) /
+                              10 ** inputTokenData!.decimals}{" "}
+                            {inputTokenData!.symbol}
                           </p>
                         </div>
-                        <div className="flex flex-row justify-between">
-                          <p>Amount withdrawn</p>
+
+                        <div className="flex flex-row justify-between mt-1">
+                          <p>Increment USDC Value</p>
                           <p>
-                            {parseFloat(
-                              userData.account.outWithdrawn.toString()
+                            {parseInt(
+                              userData.account.incrementUsdcValue.toString()
                             ) /
-                              10 ** outputTokenData!.decimals}{" "}
-                            {outputTokenData!.symbol}
+                              10 ** 6}{" "}
+                            USDC
                           </p>
                         </div>
-                      </div>
 
-                      <div className="flex flex-row justify-between mt-2">
-                        <p>Total Deposited</p>
-                        <p>
-                          {parseFloat(userData.account.inDeposited.toString()) /
-                            10 ** inputTokenData!.decimals}{" "}
-                          {inputTokenData!.symbol}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-row justify-between mt-1">
-                        <p>Total Spent</p>
-                        <p>
-                          {parseFloat(userData.account.inUsed.toString()) /
-                            10 ** inputTokenData!.decimals}{" "}
-                          {inputTokenData!.symbol}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-row justify-between mt-1">
-                        <p>Increment USDC Value</p>
-                        <p>
-                          {parseInt(
-                            userData.account.incrementUsdcValue.toString()
-                          ) /
-                            10 ** 6}{" "}
-                          USDC
-                        </p>
-                      </div>
-
-                      <div className="flex flex-row justify-between mt-1">
-                        <p>Supposed USDC Value</p>
-                        <p>
-                          {parseInt(
-                            userData.account.supposedUsdcValue.toString()
-                          ) /
-                            10 ** 6}{" "}
-                          USDC
-                        </p>
-                      </div>
-
-                      <div className="divider my-1"></div>
-
-                      <div className="flex flex-row justify-between mt-1">
-                        <p>Buying</p>
-                        <div className="flex flex-row items-center">
-                        <img src={outputTokenData?.logoURI} alt={outputTokenData?.symbol} className="w-4 h-4 rounded-full" />
-                        <p className="ml-1">{outputTokenData?.symbol}</p>
+                        <div className="flex flex-row justify-between mt-1">
+                          <p>Supposed USDC Value</p>
+                          <p>
+                            {parseInt(
+                              userData.account.supposedUsdcValue.toString()
+                            ) /
+                              10 ** 6}{" "}
+                            USDC
+                          </p>
                         </div>
-                      </div>
 
-                      <div className="flex flex-row justify-between mt-1">
-                        <p>Order Interval</p>
-                        <p>
-                          {parseInt(userData.account.orderInterval.toString()) /
-                            (60 * 60 * 24)}{" "}
-                          day(s)
-                        </p>
-                      </div>
+                        <div className="divider my-1"></div>
 
-                      <div className="flex flex-row justify-between mt-1">
-                        <p>Next Order</p>
-                        <p>
-                          {new Date(
-                            Number(userData.account.nextOrderAt)
-                          ).toLocaleString()}
-                        </p>
-                      </div>
+                        <div className="flex flex-row justify-between mt-1">
+                          <p>Buying</p>
+                          <div className="flex flex-row items-center">
+                            <img
+                              src={outputTokenData?.logoURI}
+                              alt={outputTokenData?.symbol}
+                              className="w-4 h-4 rounded-full"
+                            />
+                            <p className="ml-1">{outputTokenData?.symbol}</p>
+                          </div>
+                        </div>
 
-                      <div className="flex flex-row justify-between mt-1">
-                        <p>Created At</p>
-                        <p>
-                          {new Date(
-                            Number(userData.account.createdAt)
-                          ).toLocaleString()}
-                        </p>
+                        <div className="flex flex-row justify-between mt-1">
+                          <p>Order Interval</p>
+                          <p>
+                            {formatTimeInterval(
+                              parseInt(
+                                userData.account.orderInterval.toString()
+                              )
+                            )}{" "}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-row justify-between mt-1">
+                          <p>Next Order</p>
+                          <p>
+                            {new Date(
+                              Number(userData.account.nextOrderAt)
+                            ).toLocaleString()}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-row justify-between mt-1">
+                          <p>Created At</p>
+                          <p>
+                            {new Date(
+                              Number(userData.account.createdAt)
+                            ).toLocaleString()}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   <input
                     type="radio"
-                    name="my_tabs_1"
+                    name={`user_tabs_${index}`}
                     role="tab"
                     className="tab"
+                    checked={activeTab === "Orders"}
                     aria-label="Orders"
+                    onChange={() => toggleTab("Orders")}
                   />
-                  <div role="tabpanel" className="tab-content p-10"></div>
+                  {activeTab === "Orders" && (
+                    <div role="tabpanel" className="tab-content p-10">
+                      <p>No orders to show</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
