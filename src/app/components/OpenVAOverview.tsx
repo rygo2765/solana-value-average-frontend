@@ -1,7 +1,8 @@
 "use client";
 import { PublicKey } from "@solana/web3.js";
-import { Token } from "@/lib/helpers";
+import { Token, withdrawAllAndClose } from "@/lib/helpers";
 import { useState } from "react";
+import { Wallet } from "@jup-ag/wallet-adapter";
 
 interface UserValueAvg {
   idx: BigInt;
@@ -27,8 +28,9 @@ interface UserValueAvg {
 }
 
 interface OpenVAOverviewProps {
-  fetchedUserValueAvg: { account: UserValueAvg }[];
+  fetchedUserValueAvg: { account: UserValueAvg; publicKey: PublicKey}[];
   tokenList: Token[];
+  wallet: Wallet;
 }
 
 const getTokenData = (
@@ -37,6 +39,7 @@ const getTokenData = (
 ): Token | undefined => {
   return tokenList.find((token) => token.address === publicKey.toBase58());
 };
+
 
 const formatTimeInterval = (seconds: number) => {
   const minute = 60;
@@ -68,12 +71,26 @@ const formatTimeInterval = (seconds: number) => {
 const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
   fetchedUserValueAvg,
   tokenList,
+  wallet,
 }) => {
   const [activeTab, setActiveTab] = useState("Overview");
 
   const toggleTab = (tabName: string) => {
     setActiveTab(tabName);
   };
+
+  const submitWithdrawAndClose = async(valueAveragePubKey: PublicKey) => {
+    try{
+      console.log(wallet.adapter.publicKey?.toBase58())
+      const res = await withdrawAllAndClose(wallet!, valueAveragePubKey)
+
+      if (res){
+        console.log('withdraw and close successful')
+      }
+    } catch(error){
+      console.error('Error in withdrawing and closing: ', error)
+    }
+  }
 
   if (!fetchedUserValueAvg) {
     return <p>Loading data...</p>;
@@ -82,14 +99,14 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
   return (
     <div className="w-full">
       {fetchedUserValueAvg.map(
-        (userData: { account: UserValueAvg }, index: number) => {
+        ({ account, publicKey }: { account: UserValueAvg; publicKey: PublicKey }, index: number) => {
           const inputTokenData = getTokenData(
             tokenList,
-            userData.account.inputMint
+            account.inputMint
           );
           const outputTokenData = getTokenData(
             tokenList,
-            userData.account.outputMint
+            account.outputMint
           );
 
           return (
@@ -129,7 +146,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                 </div>
                 <div className="flex flex- text-white font-bold">
                   <p>
-                    {parseInt(userData.account.inDeposited.toString()) /
+                    {parseInt(account.inDeposited.toString()) /
                       10 ** inputTokenData!.decimals}
                   </p>
                   <p className="ml-2">{inputTokenData!.symbol}</p>
@@ -156,7 +173,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           <div className="flex flex-row justify-between">
                             <p>VA {inputTokenData!.symbol} balance </p>
                             <p>
-                              {parseFloat(userData.account.inLeft.toString()) /
+                              {parseFloat(account.inLeft.toString()) /
                                 10 ** inputTokenData!.decimals}{" "}
                               {inputTokenData!.symbol}
                             </p>
@@ -165,7 +182,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                             <p>VA {outputTokenData!.symbol} balance </p>
                             <p>
                               {parseFloat(
-                                userData.account.outReceived.toString()
+                                account.outReceived.toString()
                               ) /
                                 10 ** outputTokenData!.decimals}{" "}
                               {outputTokenData!.symbol}
@@ -175,7 +192,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                             <p>Amount withdrawn</p>
                             <p>
                               {parseFloat(
-                                userData.account.outWithdrawn.toString()
+                                account.outWithdrawn.toString()
                               ) /
                                 10 ** outputTokenData!.decimals}{" "}
                               {outputTokenData!.symbol}
@@ -187,7 +204,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           <p>Total Deposited</p>
                           <p>
                             {parseFloat(
-                              userData.account.inDeposited.toString()
+                              account.inDeposited.toString()
                             ) /
                               10 ** inputTokenData!.decimals}{" "}
                             {inputTokenData!.symbol}
@@ -197,7 +214,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                         <div className="flex flex-row justify-between mt-1">
                           <p>Total Spent</p>
                           <p>
-                            {parseFloat(userData.account.inUsed.toString()) /
+                            {parseFloat(account.inUsed.toString()) /
                               10 ** inputTokenData!.decimals}{" "}
                             {inputTokenData!.symbol}
                           </p>
@@ -207,7 +224,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           <p>Increment USDC Value</p>
                           <p>
                             {parseInt(
-                              userData.account.incrementUsdcValue.toString()
+                              account.incrementUsdcValue.toString()
                             ) /
                               10 ** 6}{" "}
                             USDC
@@ -218,7 +235,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           <p>Supposed USDC Value</p>
                           <p>
                             {parseInt(
-                              userData.account.supposedUsdcValue.toString()
+                              account.supposedUsdcValue.toString()
                             ) /
                               10 ** 6}{" "}
                             USDC
@@ -244,7 +261,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           <p>
                             {formatTimeInterval(
                               parseInt(
-                                userData.account.orderInterval.toString()
+                                account.orderInterval.toString()
                               )
                             )}{" "}
                           </p>
@@ -254,7 +271,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           <p>Next Order</p>
                           <p>
                             {new Date(
-                              Number(userData.account.nextOrderAt)
+                              Number(account.nextOrderAt)
                             ).toLocaleString()}
                           </p>
                         </div>
@@ -263,26 +280,23 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           <p>Created At</p>
                           <p>
                             {new Date(
-                              Number(userData.account.createdAt)
+                              Number(account.createdAt) * 1000
                             ).toLocaleString()}
                           </p>
                         </div>
                       </div>
                       <div className="flex flex-col w-full">
                         <div className="flex flex-row justify-between mt-3 w-full">
-                          <button className="btn bg-yellow-500 text-black w-1/2 mr-0.5">
+                          <button className="btn bg-yellow-500 text-black w-full">
                             Deposit
-                          </button>
-                          <button className="btn bg-yellow-500 text-black w-1/2 ml-0.5">
-                            Withdraw
                           </button>
                         </div>
                         <div className="flex flex-row justify-between mt-1 w-full">
-                          <button className="btn bg-yellow-500 text-black w-1/2 mr-0.5">
+                          <button className="btn bg-yellow-500 text-black w-1/2 mr-0.5" onClick={() => submitWithdrawAndClose(publicKey)}>
                             Withdraw & Close
                           </button>
                           <button className="btn bg-yellow-500 text-black w-1/2 ml-0.5">
-                            Close
+                            Withdraw
                           </button>
                         </div>
                       </div>

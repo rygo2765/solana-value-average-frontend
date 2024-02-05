@@ -52,6 +52,7 @@ const HomePage: React.FC = () => {
           const fetchedUserValueAvg = await programClient.getCurrentByUser(
             wallet.adapter.publicKey!
           );
+          console.log(fetchedUserValueAvg[0].publicKey.toBase58());
           setUserValueAvg(fetchedUserValueAvg);
         } catch (error) {
           console.error("Error fetching user value average:", error);
@@ -140,7 +141,7 @@ const HomePage: React.FC = () => {
       ),
       deposit: conversionResult!.deposit,
       usdcValueIncrement: conversionResult!.valueIncrement,
-      startDateTime: BigInt(selectedDateTime.getTime()),
+      startDateTime: BigInt(selectedDateTime.getTime() / 1000),
     };
 
     console.log(valueAverageData);
@@ -307,10 +308,12 @@ const HomePage: React.FC = () => {
           </div>
 
           {userValueAvg && tokenList ? (
-            <OpenVAOverview fetchedUserValueAvg={userValueAvg} tokenList={tokenList}/>
-          ) : (
-            null
-          )}
+            <OpenVAOverview
+              fetchedUserValueAvg={userValueAvg}
+              tokenList={tokenList}
+              wallet={wallet!}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>
