@@ -59,6 +59,12 @@ export async function openValueAverage(
   }
 }
 
+export async function deposit(
+  wallet: Wallet
+){
+
+}
+
 export function validateAndConvertValues(
   orderIntervalValueString: string,
   totalAmountDepositString: string,

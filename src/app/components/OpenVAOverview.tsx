@@ -268,6 +268,24 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           </p>
                         </div>
                       </div>
+                      <div className="flex flex-col w-full">
+                        <div className="flex flex-row justify-between mt-3 w-full">
+                          <button className="btn bg-yellow-500 text-black w-1/2 mr-0.5">
+                            Deposit
+                          </button>
+                          <button className="btn bg-yellow-500 text-black w-1/2 ml-0.5">
+                            Withdraw
+                          </button>
+                        </div>
+                        <div className="flex flex-row justify-between mt-1 w-full">
+                          <button className="btn bg-yellow-500 text-black w-1/2 mr-0.5">
+                            Withdraw & Close
+                          </button>
+                          <button className="btn bg-yellow-500 text-black w-1/2 ml-0.5">
+                            Close
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
 
