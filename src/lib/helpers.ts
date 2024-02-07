@@ -2,6 +2,7 @@ import { ValueAverageProgram } from "solana-value-average";
 import { conn } from "./constants";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import { Wallet } from "@jup-ag/wallet-adapter";
+import { toast } from "sonner";
 
 export interface ValueAverageData {
   userPublicKey: PublicKey;
@@ -53,8 +54,10 @@ export async function openValueAverage(
       },
       "confirmed"
     );
+    toast.success('Transaction confirmed successfully!')
   } catch (error) {
     console.error("Confirmation failed: ", error);
+    toast.error('Transaction confirmation failed. Please try again.');
   }
 }
 
@@ -152,7 +155,7 @@ export function validateAndConvertValues(
     }
 
     const deposit = BigInt(totalAmountDeposit * 10 ** inTokenDecimals); //to be changed
-    const valueIncrement = BigInt(totalValueIncrement * 10 ** 9); //in USDC
+    const valueIncrement = BigInt(totalValueIncrement * 10 ** 6); //in USDC
 
     return {
       orderIntervalValue,

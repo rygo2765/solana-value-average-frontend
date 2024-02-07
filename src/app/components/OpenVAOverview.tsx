@@ -272,7 +272,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           <p>
                             {new Date(
                               Number(account.nextOrderAt)
-                            ).toLocaleString()}
+                            * 1000).toLocaleString()}
                           </p>
                         </div>
 
