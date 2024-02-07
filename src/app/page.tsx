@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useUnifiedWallet } from "@jup-ag/wallet-adapter";
 import { PublicKey } from "@solana/web3.js";
 import { TuiDateTimePicker } from "nextjs-tui-date-picker";
+import DateTimePicker from "react-datetime-picker";
 import {
   openValueAverage,
   validateAndConvertValues,
@@ -13,8 +14,13 @@ import { ValueAverageProgram } from "solana-value-average";
 import { conn, usdcInfo, solInfo } from "@/lib/constants";
 import OpenVAOverview from "./components/OpenVAOverview";
 import TokenModal from "./components/TokenModal";
+import PastVAOverview from "./components/PastVAOverview";
 
-const programClient = new ValueAverageProgram(conn, "mainnet-beta");
+const programClient = new ValueAverageProgram(
+  conn,
+  "mainnet-beta",
+  "https://solana-value-average.keepbuilding.work"
+);
 const defaultInToken = usdcInfo;
 const defaultOutToken = solInfo;
 
@@ -22,7 +28,7 @@ const HomePage: React.FC = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState("minute");
   const [selectedTimeframeInSec, setSelectedTimeframeInSec] = useState(60);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [selectedDateTime, setSelectedDateTime] = useState(new Date());
+  const [selectedDateTime, setSelectedDateTime] = useState<Date>(new Date());
   const { wallet, connected } = useUnifiedWallet();
   const [userValueAvg, setUserValueAvg] = useState<any[] | null>(null);
 
@@ -30,6 +36,7 @@ const HomePage: React.FC = () => {
   const [selectedInToken, setSelectedInToken] = useState<Token>(defaultInToken);
   const [selectedOutToken, setSelectedOutToken] =
     useState<Token>(defaultOutToken);
+  const [currentVA, setCurrentVA] = useState(true);
 
   //Hooks
   useEffect(() => {
@@ -52,6 +59,15 @@ const HomePage: React.FC = () => {
           const fetchedUserValueAvg = await programClient.getCurrentByUser(
             wallet.adapter.publicKey!
           );
+          console.log(fetchedUserValueAvg);
+          // const closedTest = await programClient.getClosedByUser(wallet.adapter.publicKey!)
+          // console.log(closedTest)
+
+          const fillTest = await programClient.getFillHistory(
+            fetchedUserValueAvg[0].publicKey
+          );
+          console.log(fillTest);
+
           setUserValueAvg(fetchedUserValueAvg);
         } catch (error) {
           console.error("Error fetching user value average:", error);
@@ -90,7 +106,9 @@ const HomePage: React.FC = () => {
   };
 
   const handleDateTimeSelect = (newDateTime: Date): void => {
+    console.log(newDateTime);
     const parsedDate = new Date(newDateTime);
+    console.log(parsedDate);
     setSelectedDateTime(parsedDate);
   };
 
@@ -100,6 +118,14 @@ const HomePage: React.FC = () => {
 
   const handleOutTokenSelect = (selectedToken: Token) => {
     setSelectedOutToken(selectedToken);
+  };
+
+  const handleActiveValueAvgsClick = () => {
+    setCurrentVA(true);
+  };
+
+  const handlePastValueAvgsClick = () => {
+    setCurrentVA(false);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -140,7 +166,7 @@ const HomePage: React.FC = () => {
       ),
       deposit: conversionResult!.deposit,
       usdcValueIncrement: conversionResult!.valueIncrement,
-      startDateTime: BigInt(selectedDateTime.getTime()),
+      startDateTime: BigInt(selectedDateTime.getTime() / 1000),
     };
 
     console.log(valueAverageData);
@@ -301,16 +327,34 @@ const HomePage: React.FC = () => {
 
       {connected ? (
         <div id="displayOpened" className="flex flex-col w-[460px]">
-          <div className="flex flex-row justify-start ">
-            <button className="btn btn-sm mx-2">Active Value Avgs</button>
-            <button className="btn btn-sm mx-2">Past Value Avgs</button>
+          <div className="flex flex-row justify-start mb-4">
+            <button
+              className={`btn btn-sm mx-2 text-black ${
+                currentVA ? "bg-blue-500" : "bg-gray-300"
+              }`}
+              onClick={handleActiveValueAvgsClick}
+            >
+              Active Value Avgs
+            </button>
+            <button
+              className={`btn btn-sm mx-2 text-black ${
+                !currentVA ? "bg-blue-500" : "bg-gray-300"
+              }`}
+              onClick={handlePastValueAvgsClick}
+            >
+              Past Value Avgs
+            </button>
           </div>
 
-          {userValueAvg && tokenList ? (
-            <OpenVAOverview fetchedUserValueAvg={userValueAvg} tokenList={tokenList}/>
-          ) : (
-            null
-          )}
+          {currentVA && userValueAvg && tokenList ? (
+            <OpenVAOverview
+              fetchedUserValueAvg={userValueAvg}
+              tokenList={tokenList}
+              wallet={wallet!}
+            />
+          ) : !currentVA ? (
+            <PastVAOverview />
+          ) : null}
         </div>
       ) : null}
     </div>

@@ -2,6 +2,7 @@ import { ValueAverageProgram } from "solana-value-average";
 import { conn } from "./constants";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import { Wallet } from "@jup-ag/wallet-adapter";
+import { toast } from "sonner";
 
 export interface ValueAverageData {
   userPublicKey: PublicKey;
@@ -44,7 +45,7 @@ export async function openValueAverage(
     }
 
     const latestBlockHash = await conn.getLatestBlockhash();
-    
+
     await conn.confirmTransaction(
       {
         blockhash: latestBlockHash.blockhash,
@@ -53,9 +54,77 @@ export async function openValueAverage(
       },
       "confirmed"
     );
-
+    toast.success('Transaction confirmed successfully!')
   } catch (error) {
     console.error("Confirmation failed: ", error);
+    toast.error('Transaction confirmation failed. Please try again.');
+  }
+}
+
+export async function deposit(wallet: Wallet) {}
+
+export async function withdrawAllAndClose(
+  wallet: Wallet,
+  valueAveragePubKey: PublicKey
+) {
+  try {
+    const valueAverage = await programClient.get(valueAveragePubKey);
+
+    const tx = new Transaction();
+
+    if (valueAverage.inLeft > 0) {
+      console.log(`Has input balance of ${valueAverage.inLeft.toString()}`);
+
+      tx.add(
+        await programClient.withdraw(
+          valueAverage.user,
+          valueAverage.user,
+          valueAveragePubKey,
+          valueAverage.inputMint
+        )
+      );
+    }
+
+    if (valueAverage.outReceived - valueAverage.outWithdrawn > 0) {
+      console.log(
+        `Has output balance of ${valueAverage.outReceived
+          .sub(valueAverage.outWithdrawn)
+          .toString()}`
+      );
+
+      tx.add(
+        await programClient.withdraw(
+          valueAverage.user,
+          valueAverage.user,
+          valueAveragePubKey,
+          valueAverage.outputMint
+        )
+      );
+    }
+
+    tx.add(await programClient.close(valueAverage.user, valueAveragePubKey));
+
+    const txsig = await wallet?.adapter.sendTransaction(tx, conn, {
+      skipPreflight: false,
+    });
+
+    if (txsig === undefined) {
+      throw new Error("Transaction signature is undefined");
+    }
+
+    const latestBlockHash = await conn.getLatestBlockhash();
+
+    await conn.confirmTransaction(
+      {
+        blockhash: latestBlockHash.blockhash,
+        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+        signature: txsig,
+      },
+      "confirmed"
+    );
+    return true;
+  } catch (err) {
+    console.error("Error in withdrawAllAndClose: ", err);
   }
 }
 
@@ -86,7 +155,7 @@ export function validateAndConvertValues(
     }
 
     const deposit = BigInt(totalAmountDeposit * 10 ** inTokenDecimals); //to be changed
-    const valueIncrement = BigInt(totalValueIncrement * 10 ** 9); //in USDC
+    const valueIncrement = BigInt(totalValueIncrement * 10 ** 6); //in USDC
 
     return {
       orderIntervalValue,
@@ -142,18 +211,6 @@ export function findTokenByAddress(
 ): Token | undefined {
   return tokens.find((token) => token.address === address);
 }
-
-// export function createTokenIndexMap(tokens: Token[]): { [key: string]: Token } {
-//   const indexMap: { [key: string]: Token } = {};
-//   tokens.forEach((token) => {
-//     //index by name
-//     indexMap[token.name.toLowerCase()] = token;
-
-//     // indexMap[token.address.toLowerCase()] = token;
-//   });
-
-//   return indexMap;
-// }
 
 export function shortenAddress(address: string, length = 4) {
   if (!address) return "";
