@@ -28,7 +28,7 @@ interface UserValueAvg {
 }
 
 interface OpenVAOverviewProps {
-  fetchedUserValueAvg: { account: UserValueAvg; publicKey: PublicKey}[];
+  fetchedUserValueAvg: { account: UserValueAvg; publicKey: PublicKey }[];
   tokenList: Token[];
   wallet: Wallet;
 }
@@ -39,7 +39,6 @@ const getTokenData = (
 ): Token | undefined => {
   return tokenList.find((token) => token.address === publicKey.toBase58());
 };
-
 
 const formatTimeInterval = (seconds: number) => {
   const minute = 60;
@@ -79,18 +78,18 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
     setActiveTab(tabName);
   };
 
-  const submitWithdrawAndClose = async(valueAveragePubKey: PublicKey) => {
-    try{
-      console.log(wallet.adapter.publicKey?.toBase58())
-      const res = await withdrawAllAndClose(wallet!, valueAveragePubKey)
+  const submitWithdrawAndClose = async (valueAveragePubKey: PublicKey) => {
+    try {
+      console.log(wallet.adapter.publicKey?.toBase58());
+      const res = await withdrawAllAndClose(wallet!, valueAveragePubKey);
 
-      if (res){
-        console.log('withdraw and close successful')
+      if (res) {
+        console.log("withdraw and close successful");
       }
-    } catch(error){
-      console.error('Error in withdrawing and closing: ', error)
+    } catch (error) {
+      console.error("Error in withdrawing and closing: ", error);
     }
-  }
+  };
 
   if (!fetchedUserValueAvg) {
     return <p>Loading data...</p>;
@@ -99,18 +98,18 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
   return (
     <div className="w-full">
       {fetchedUserValueAvg.map(
-        ({ account, publicKey }: { account: UserValueAvg; publicKey: PublicKey }, index: number) => {
-          const inputTokenData = getTokenData(
-            tokenList,
-            account.inputMint
-          );
-          const outputTokenData = getTokenData(
-            tokenList,
-            account.outputMint
-          );
+        (
+          {
+            account,
+            publicKey,
+          }: { account: UserValueAvg; publicKey: PublicKey },
+          index: number
+        ) => {
+          const inputTokenData = getTokenData(tokenList, account.inputMint);
+          const outputTokenData = getTokenData(tokenList, account.outputMint);
 
           return (
-            <div className="collapse bg-base-200 mt-5" key={index}>
+            <div className="collapse bg-base-200 mt-1" key={index}>
               <input type="checkbox" />
               <div className="collapse-title text-sm font-medium flex flex-row justify-between">
                 <div className="flex flex-row ">
@@ -143,6 +142,25 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                   <p className="font-bold text-white">
                     {outputTokenData!.symbol}
                   </p>
+
+                  <a
+                    target="_blank"
+                    href={`https://solscan.io/account/${publicKey.toBase58()}`}
+                    className="ml-2"
+                  >
+                    <svg
+                      width="12"
+                      height="20"
+                      viewBox="0 0 10 10"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M4 2V3H1.5V8.5H7V6H8V9C8 9.13261 7.94732 9.25979 7.85355 9.35355C7.75979 9.44732 7.63261 9.5 7.5 9.5H1C0.867392 9.5 0.740215 9.44732 0.646447 9.35355C0.552678 9.25979 0.5 9.13261 0.5 9V2.5C0.5 2.36739 0.552678 2.24021 0.646447 2.14645C0.740215 2.05268 0.867392 2 1 2H4ZM9.5 0.5V4.5H8.5V2.2065L4.6035 6.1035L3.8965 5.3965L7.7925 1.5H5.5V0.5H9.5Z"
+                        fill="currentColor"
+                      ></path>
+                    </svg>
+                  </a>
                 </div>
                 <div className="flex flex- text-white font-bold">
                   <p>
@@ -181,9 +199,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           <div className="flex flex-row justify-between">
                             <p>VA {outputTokenData!.symbol} balance </p>
                             <p>
-                              {parseFloat(
-                                account.outReceived.toString()
-                              ) /
+                              {parseFloat(account.outReceived.toString()) /
                                 10 ** outputTokenData!.decimals}{" "}
                               {outputTokenData!.symbol}
                             </p>
@@ -191,9 +207,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           <div className="flex flex-row justify-between">
                             <p>Amount withdrawn</p>
                             <p>
-                              {parseFloat(
-                                account.outWithdrawn.toString()
-                              ) /
+                              {parseFloat(account.outWithdrawn.toString()) /
                                 10 ** outputTokenData!.decimals}{" "}
                               {outputTokenData!.symbol}
                             </p>
@@ -203,9 +217,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                         <div className="flex flex-row justify-between mt-2">
                           <p>Total Deposited</p>
                           <p>
-                            {parseFloat(
-                              account.inDeposited.toString()
-                            ) /
+                            {parseFloat(account.inDeposited.toString()) /
                               10 ** inputTokenData!.decimals}{" "}
                             {inputTokenData!.symbol}
                           </p>
@@ -223,9 +235,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                         <div className="flex flex-row justify-between mt-1">
                           <p>Increment USDC Value</p>
                           <p>
-                            {parseInt(
-                              account.incrementUsdcValue.toString()
-                            ) /
+                            {parseInt(account.incrementUsdcValue.toString()) /
                               10 ** 6}{" "}
                             USDC
                           </p>
@@ -234,9 +244,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                         <div className="flex flex-row justify-between mt-1">
                           <p>Supposed USDC Value</p>
                           <p>
-                            {parseInt(
-                              account.supposedUsdcValue.toString()
-                            ) /
+                            {parseInt(account.supposedUsdcValue.toString()) /
                               10 ** 6}{" "}
                             USDC
                           </p>
@@ -260,9 +268,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           <p>Order Interval</p>
                           <p>
                             {formatTimeInterval(
-                              parseInt(
-                                account.orderInterval.toString()
-                              )
+                              parseInt(account.orderInterval.toString())
                             )}{" "}
                           </p>
                         </div>
@@ -271,8 +277,8 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           <p>Next Order</p>
                           <p>
                             {new Date(
-                              Number(account.nextOrderAt)
-                            * 1000).toLocaleString()}
+                              Number(account.nextOrderAt) * 1000
+                            ).toLocaleString()}
                           </p>
                         </div>
 
@@ -292,7 +298,10 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           </button>
                         </div>
                         <div className="flex flex-row justify-between mt-1 w-full">
-                          <button className="btn bg-yellow-500 text-black w-1/2 mr-0.5" onClick={() => submitWithdrawAndClose(publicKey)}>
+                          <button
+                            className="btn bg-yellow-500 text-black w-1/2 mr-0.5"
+                            onClick={() => submitWithdrawAndClose(publicKey)}
+                          >
                             Withdraw & Close
                           </button>
                           <button className="btn bg-yellow-500 text-black w-1/2 ml-0.5">
