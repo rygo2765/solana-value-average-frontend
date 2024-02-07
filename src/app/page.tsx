@@ -10,7 +10,8 @@ import {
   getAllTokens,
   Token,
 } from "@/lib/helpers";
-import { ValueAverageProgram } from "solana-value-average";
+// import { ValueAverageProgram } from "";
+import { ValueAverageProgram } from "@jup-ag/value-average";
 import { conn, usdcInfo, solInfo } from "@/lib/constants";
 import OpenVAOverview from "./components/OpenVAOverview";
 import TokenModal from "./components/TokenModal";
@@ -60,12 +61,15 @@ const HomePage: React.FC = () => {
             wallet.adapter.publicKey!
           );
           console.log(fetchedUserValueAvg);
-          // const closedTest = await programClient.getClosedByUser(wallet.adapter.publicKey!)
-          // console.log(closedTest)
 
-          const fillTest = await programClient.getFillHistory(
-            fetchedUserValueAvg[0].publicKey
+          const closedTest = await programClient.getClosedByUser(
+            wallet.adapter.publicKey!
           );
+          console.log(closedTest);
+
+          // const fillTest = await programClient.getFillHistory(
+          //   fetchedUserValueAvg[0].publicKey
+          // );
           console.log(fillTest);
 
           setUserValueAvg(fetchedUserValueAvg);

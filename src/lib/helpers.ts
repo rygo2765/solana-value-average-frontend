@@ -1,4 +1,4 @@
-import { ValueAverageProgram } from "solana-value-average";
+import { ValueAverageProgram } from "@jup-ag/value-average";
 import { conn } from "./constants";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import { Wallet } from "@jup-ag/wallet-adapter";
