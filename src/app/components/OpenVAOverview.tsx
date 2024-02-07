@@ -146,7 +146,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                   <a
                     target="_blank"
                     href={`https://solscan.io/account/${publicKey.toBase58()}`}
-                    className="ml-2"
+                    className="ml-2 relative z-10"
                   >
                     <svg
                       width="12"

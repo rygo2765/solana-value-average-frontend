@@ -21,17 +21,20 @@ export async function openValueAverage(
   wallet: Wallet
 ) {
   try {
-    const { ixs, pda } = await programClient.open(
-      valueAverageData.userPublicKey,
-      valueAverageData.userPublicKey,
-      valueAverageData.inputToken,
-      valueAverageData.outputToken,
-      valueAverageData.orderInterval,
-      valueAverageData.deposit,
-      valueAverageData.usdcValueIncrement,
-      undefined,
-      valueAverageData.startDateTime
-    );
+    const { ixs, pda } = await programClient.open({
+      user: valueAverageData.userPublicKey,
+      payer: valueAverageData.userPublicKey,
+      inputMint: valueAverageData.inputToken,
+      outputMint: valueAverageData.outputToken,
+      orderInterval: valueAverageData.orderInterval,
+      depositAmount: valueAverageData.deposit,
+      incrementUSDCValue: valueAverageData.usdcValueIncrement,
+      feeDataAccount: undefined,
+      referralFeeAccount: undefined,
+      userInputAccount: undefined,
+      startAtUnix: valueAverageData.startDateTime,
+      autoWithdraw: true,
+  });
 
     const tx = new Transaction();
     tx.add(...ixs);
@@ -75,14 +78,18 @@ export async function withdrawAllAndClose(
     if (valueAverage.inLeft > 0) {
       console.log(`Has input balance of ${valueAverage.inLeft.toString()}`);
 
-      tx.add(
-        await programClient.withdraw(
+      
+      const withdrawInTokenInstruction = await programClient.withdraw(
           valueAverage.user,
           valueAverage.user,
           valueAveragePubKey,
-          valueAverage.inputMint
+          valueAverage.inputMint,
+          undefined,
+          undefined,
+          undefined
         )
-      );
+
+        tx.add(...withdrawInTokenInstruction)
     }
 
     if (valueAverage.outReceived - valueAverage.outWithdrawn > 0) {
@@ -92,17 +99,23 @@ export async function withdrawAllAndClose(
           .toString()}`
       );
 
-      tx.add(
-        await programClient.withdraw(
+      
+        const withdrawOutTokenInstruction = await programClient.withdraw(
           valueAverage.user,
           valueAverage.user,
           valueAveragePubKey,
-          valueAverage.outputMint
+          valueAverage.outputMint,
+          undefined,
+          undefined,
+          undefined
         )
-      );
+
+        tx.add(...withdrawOutTokenInstruction)
     }
 
-    tx.add(await programClient.close(valueAverage.user, valueAveragePubKey));
+    tx.add(await programClient.close(valueAverage.user, valueAveragePubKey, undefined));
+
+    console.log(tx)
 
     const txsig = await wallet?.adapter.sendTransaction(tx, conn, {
       skipPreflight: false,
