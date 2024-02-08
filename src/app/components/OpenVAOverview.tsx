@@ -1,8 +1,10 @@
 "use client";
 import { PublicKey } from "@solana/web3.js";
-import { Token, withdrawAllAndClose } from "@/lib/helpers";
-import { useState } from "react";
+import { Token, withdrawAllAndClose, getTokenData } from "@/lib/helpers";
+import { useState, useEffect } from "react";
 import { Wallet } from "@jup-ag/wallet-adapter";
+import { programClient } from "@/lib/constants";
+import Orders from "./Orders";
 
 interface UserValueAvg {
   idx: BigInt;
@@ -32,13 +34,6 @@ interface OpenVAOverviewProps {
   tokenList: Token[];
   wallet: Wallet;
 }
-
-const getTokenData = (
-  tokenList: Token[],
-  publicKey: PublicKey
-): Token | undefined => {
-  return tokenList.find((token) => token.address === publicKey.toBase58());
-};
 
 const formatTimeInterval = (seconds: number) => {
   const minute = 60;
@@ -73,6 +68,8 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
   wallet,
 }) => {
   const [activeTab, setActiveTab] = useState("Overview");
+  const [fillHistories, setFillHistories] = useState<any[]>([]);
+
 
   const toggleTab = (tabName: string) => {
     setActiveTab(tabName);
@@ -94,6 +91,21 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
   if (!fetchedUserValueAvg) {
     return <p>Loading data...</p>;
   }
+
+  useEffect(() => {
+    const fetchFillHistories = async () => {
+      const histories = await Promise.all(
+        fetchedUserValueAvg.map(async ({ publicKey }) => {
+          return await programClient.getFillHistory(publicKey);
+        })
+      );
+
+      setFillHistories(histories);
+    };
+
+    fetchFillHistories();
+  }, []);
+
 
   return (
     <div className="w-full">
@@ -322,8 +334,12 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                     onChange={() => toggleTab("Orders")}
                   />
                   {activeTab === "Orders" && (
-                    <div role="tabpanel" className="tab-content p-10">
-                      <p>No orders to show</p>
+                    <div role="tabpanel" className="tab-content pt-5">
+                      <Orders
+                        inTokenData={inputTokenData!}
+                        outTokenData={outputTokenData!}
+                        fillEvents={fillHistories[index]}
+                      />
                     </div>
                   )}
                 </div>

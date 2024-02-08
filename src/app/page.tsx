@@ -9,17 +9,12 @@ import {
   getAllTokens,
   Token,
 } from "@/lib/helpers";
-import { ValueAverageProgram } from "@jup-ag/value-average";
-import { conn, usdcInfo, solInfo } from "@/lib/constants";
+import { programClient, usdcInfo, solInfo } from "@/lib/constants";
 import OpenVAOverview from "./components/OpenVAOverview";
 import TokenModal from "./components/TokenModal";
 import PastVAOverview from "./components/PastVAOverview";
 
-const programClient = new ValueAverageProgram(
-  conn,
-  "mainnet-beta",
-  "https://va.jup.ag"
-);
+
 const defaultInToken = usdcInfo;
 const defaultOutToken = solInfo;
 
@@ -58,18 +53,16 @@ const HomePage: React.FC = () => {
           const fetchedUserValueAvg = await programClient.getCurrentByUser(
             wallet.adapter.publicKey!
           );
-          console.log(new Date(Number(fetchedUserValueAvg[0].account.createdAt)));
-          console.log(fetchedUserValueAvg[0].account.createdAt.toString())
-          console.log(fetchedUserValueAvg[0].account.inDeposited.toString())
+          
           // const closedTest = await programClient.getClosedByUser(
           //   wallet.adapter.publicKey!
           // );
-          // console.log(closedTest);
+          // console.log('Closed: ',closedTest);
 
           // const fillTest = await programClient.getFillHistory(
           //   fetchedUserValueAvg[0].publicKey
           // );
-          // console.log(fillTest);
+          // console.log('Fills: ',fillTest);
 
           setUserValueAvg(fetchedUserValueAvg);
         } catch (error) {

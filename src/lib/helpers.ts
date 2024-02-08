@@ -218,6 +218,13 @@ export async function getAllTokens(): Promise<Token[]> {
   return tokens;
 }
 
+export const getTokenData = (
+  tokenList: Token[],
+  publicKey: PublicKey
+): Token | undefined => {
+  return tokenList.find((token) => token.address === publicKey.toBase58());
+};
+
 export function findTokenByAddress(
   tokens: Token[],
   address: string
@@ -231,3 +238,4 @@ export function shortenAddress(address: string, length = 4) {
   const end = address.slice(-length);
   return `${start}...${end}`;
 }
+
