@@ -58,6 +58,10 @@ const HomePage: React.FC = () => {
             wallet.adapter.publicKey!
           );
 
+          const fillTest = await programClient.getFillHistory(fetchedUserValueAvg[0].publicKey)
+
+          console.log(fillTest)
+
           setUserValueAvg(fetchedUserValueAvg);
           setPastUserValueAvg(fetchedPastUserValueAvg);
         } catch (error) {

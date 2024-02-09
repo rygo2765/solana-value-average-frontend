@@ -89,7 +89,7 @@ const Orders: React.FC<OrdersProps> = ({
               </p>
               <a
                 target="_blank"
-                href={`https://solscan.io/account/${fillEvent.txSignature}`}
+                href={`https://solscan.io/tx/${fillEvent.txSignature}`}
                 className=" ml-2 relative z-10"
               >
                 <svg

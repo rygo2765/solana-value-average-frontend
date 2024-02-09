@@ -5,6 +5,7 @@ import {
   withdrawAllAndClose,
   getTokenData,
   depositToken,
+  withdrawToken,
 } from "@/lib/helpers";
 import { useState, useEffect, ChangeEventHandler } from "react";
 import { Wallet } from "@jup-ag/wallet-adapter";
@@ -74,7 +75,9 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState("Overview");
   const [fillHistories, setFillHistories] = useState<any[]>([]);
-  const [depositAmount, setDepositAmount] = useState<BigInt>(0);
+  const [depositAmount, setDepositAmount] = useState<BigInt>(BigInt(0));
+  const [withdrawalAmount, setWithdrawalAmount] = useState<BigInt>(BigInt(0));
+  const [withdrawalToken, setWithdrawalToken] = useState<Token>();
 
   const toggleTab = (tabName: string) => {
     setActiveTab(tabName);
@@ -105,13 +108,34 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
     await depositToken(wallet, valueAveragePubKey, inTokenAmount);
   };
 
-  if (fetchedUserValueAvg.length === 0) {
-    return (
-      <div className="w-full flex justify-center outline-dotted outline-gray-700 rounded items-center h-32">
-        <p className="text-center text-gray-600">You have no active orders</p>
-      </div>
+  const handleWithdrawalTokenToggle = (
+    inputTokenData: Token,
+    outputTokenData: Token
+  ) => {
+    setWithdrawalToken((prevToken) =>
+      prevToken!.symbol === inputTokenData.symbol
+        ? outputTokenData
+        : inputTokenData
     );
-  }
+  };
+
+  const handleWithdrawalChange: ChangeEventHandler<HTMLInputElement> = (
+    event
+  ) => {
+    setWithdrawalAmount(BigInt(event.target.value));
+  };
+
+  const submitWithdrawal = async (valueAveragePubKey: PublicKey) => {
+    const withdrawTokenAmount = BigInt(
+      Number(withdrawalAmount) * 10 ** withdrawalToken!.decimals
+    );
+    await withdrawToken(
+      wallet,
+      valueAveragePubKey,
+      withdrawalToken!,
+      withdrawTokenAmount
+    );
+  };
 
   useEffect(() => {
     const fetchFillHistories = async () => {
@@ -126,6 +150,24 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
 
     fetchFillHistories();
   }, []);
+
+  useEffect(() => {
+    fetchedUserValueAvg.forEach(({ account }) => {
+      const outputTokenData = getTokenData(tokenList, account.outputMint);
+      if (outputTokenData) {
+        setWithdrawalToken(outputTokenData);
+        return;
+      }
+    });
+  }, [fetchedUserValueAvg, tokenList]);
+
+  if (fetchedUserValueAvg.length === 0) {
+    return (
+      <div className="w-full flex justify-center outline-dotted outline-gray-700 rounded items-center h-32">
+        <p className="text-center text-gray-600">You have no active orders</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -238,11 +280,18 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           </div>
                           <div className="flex flex-row justify-between mt-2">
                             <p>Amount withdrawn</p>
-                            <p>
-                              {parseFloat(account.outWithdrawn.toString()) /
-                                10 ** outputTokenData!.decimals}{" "}
-                              {outputTokenData!.symbol}
-                            </p>
+                            <div className="flex flex-col items-end">
+                              <p>
+                                {parseFloat(account.inWithdrawn.toString()) /
+                                  10 ** inputTokenData!.decimals}{" "}
+                                {inputTokenData!.symbol}
+                              </p>
+                              <p>
+                                {parseFloat(account.outWithdrawn.toString()) /
+                                  10 ** outputTokenData!.decimals}{" "}
+                                {outputTokenData!.symbol}
+                              </p>
+                            </div>
                           </div>
                         </div>
 
@@ -329,7 +378,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           <div className="flex flex-col w-1/2  mx-2">
                             <label className="label-text">
                               <span className="label-text text-xs">
-                                Deposit more {inputTokenData?.symbol}
+                                Deposit More {inputTokenData?.symbol}
                               </span>
                             </label>
                             <input
@@ -344,7 +393,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                               onClick={() =>
                                 submitDeposit(
                                   publicKey,
-                                  inputTokenData?.decimals
+                                  inputTokenData!.decimals
                                 )
                               }
                             >
@@ -352,8 +401,45 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                             </button>
                           </div>
                           <div className="divider divider-horizontal m-0" />
-                          <div className="flex flex-col w-1/2 items-center mx-2">
-                            <button className="btn btn-sm bg-yellow-500 text-black w-full">
+                          <div className="flex flex-col w-1/2 mx-2">
+                            <label className="label-text">
+                              <span className="label-text text-xs">
+                                Withdraw {withdrawalToken?.symbol}
+                              </span>
+                            </label>
+                            <div className="flex flex-row items-center">
+                              <input
+                                type="number"
+                                placeholder="Enter withdrawal amount"
+                                value={withdrawalAmount.toString()}
+                                onChange={handleWithdrawalChange}
+                                className="w-3/4 rounded h-8 pl-2"
+                              />
+                              <label className="swap swap-flip ml-3">
+                                <input
+                                  type="checkbox"
+                                  onClick={() =>
+                                    handleWithdrawalTokenToggle(
+                                      inputTokenData!,
+                                      outputTokenData!
+                                    )
+                                  }
+                                />
+
+                                <img
+                                  className="swap-off w-8 h-8 rounded"
+                                  src={outputTokenData?.logoURI}
+                                />
+                                <img
+                                  className="swap-on w-8 h-8 rounded"
+                                  src={inputTokenData?.logoURI}
+                                />
+                              </label>
+                            </div>
+                            <button
+                              className="btn btn-sm bg-yellow-500 text-black w-full mt-2"
+                              onClick={() => submitWithdrawal(publicKey)}
+                            >
                               Withdraw
                             </button>
                           </div>

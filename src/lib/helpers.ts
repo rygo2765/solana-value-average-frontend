@@ -103,6 +103,58 @@ export async function depositToken(
   }
 }
 
+export async function withdrawToken(
+  wallet: Wallet,
+  valueAveragePubKey: PublicKey,
+  withdrawalToken: Token,
+  amount: BigInt,
+) {
+  try {
+    const valueAverage = await programClient.get(valueAveragePubKey);
+
+    const tx = new Transaction();
+
+    console.log(valueAverage)
+    console.log(withdrawalToken)
+    console.log(amount)
+    
+    const withdrawTokenInstruction = await programClient.withdraw(
+      valueAverage.user,
+      valueAverage.user,
+      valueAveragePubKey,
+      new PublicKey(withdrawalToken.address),
+      undefined,
+      amount,
+      undefined
+    );
+
+    tx.add(...withdrawTokenInstruction);
+
+    const txsig = await wallet?.adapter.sendTransaction(tx, conn, {
+      skipPreflight: false,
+    });
+
+    if (txsig === undefined) {
+      throw new Error("Transaction signature is undefined");
+    }
+
+    const latestBlockHash = await conn.getLatestBlockhash();
+
+    await conn.confirmTransaction(
+      {
+        blockhash: latestBlockHash.blockhash,
+        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+        signature: txsig,
+      },
+      "confirmed"
+    );
+
+    toast.success("Withdrawal confirmed successfully");
+  } catch (error) {
+    console.error("Error in withdrawal: ", error);
+  }
+}
+
 export async function withdrawAllAndClose(
   wallet: Wallet,
   valueAveragePubKey: PublicKey
