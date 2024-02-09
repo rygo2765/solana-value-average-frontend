@@ -14,7 +14,6 @@ import OpenVAOverview from "./components/OpenVAOverview";
 import TokenModal from "./components/TokenModal";
 import PastVAOverview from "./components/PastVAOverview";
 
-
 const defaultInToken = usdcInfo;
 const defaultOutToken = solInfo;
 
@@ -25,6 +24,7 @@ const HomePage: React.FC = () => {
   const [selectedDateTime, setSelectedDateTime] = useState<Date>(new Date());
   const { wallet, connected } = useUnifiedWallet();
   const [userValueAvg, setUserValueAvg] = useState<any[] | null>(null);
+  const [pastUserValueAvg, setPastUserValueAvg] = useState<any[] | null>(null);
 
   const [tokenList, setTokenList] = useState<any[] | null>(null);
   const [selectedInToken, setSelectedInToken] = useState<Token>(defaultInToken);
@@ -53,18 +53,13 @@ const HomePage: React.FC = () => {
           const fetchedUserValueAvg = await programClient.getCurrentByUser(
             wallet.adapter.publicKey!
           );
-          
-          // const closedTest = await programClient.getClosedByUser(
-          //   wallet.adapter.publicKey!
-          // );
-          // console.log('Closed: ',closedTest);
 
-          // const fillTest = await programClient.getFillHistory(
-          //   fetchedUserValueAvg[0].publicKey
-          // );
-          // console.log('Fills: ',fillTest);
+          const fetchedPastUserValueAvg = await programClient.getClosedByUser(
+            wallet.adapter.publicKey!
+          );
 
           setUserValueAvg(fetchedUserValueAvg);
+          setPastUserValueAvg(fetchedPastUserValueAvg);
         } catch (error) {
           console.error("Error fetching user value average:", error);
         }
@@ -348,8 +343,11 @@ const HomePage: React.FC = () => {
               tokenList={tokenList}
               wallet={wallet!}
             />
-          ) : !currentVA ? (
-            <PastVAOverview />
+          ) : !currentVA && pastUserValueAvg && tokenList ? (
+            <PastVAOverview
+              tokenList={tokenList}
+              fetchedClosedValueAvg={pastUserValueAvg}
+            />
           ) : null}
         </div>
       ) : null}

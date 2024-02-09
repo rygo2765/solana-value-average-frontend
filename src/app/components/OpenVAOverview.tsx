@@ -200,7 +200,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                     >
                       <div className="flex flex-col text-xs">
                         <div className="flex flex-col bg-slate-600 w-full p-2 rounded">
-                          <div className="flex flex-row justify-between">
+                          <div className="flex flex-row justify-between mt-2">
                             <p>VA {inputTokenData!.symbol} balance </p>
                             <p>
                               {parseFloat(account.inLeft.toString()) /
@@ -208,7 +208,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                               {inputTokenData!.symbol}
                             </p>
                           </div>
-                          <div className="flex flex-row justify-between">
+                          <div className="flex flex-row justify-between mt-2">
                             <p>VA {outputTokenData!.symbol} balance </p>
                             <p>
                               {parseFloat(account.outReceived.toString()) /
@@ -216,7 +216,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                               {outputTokenData!.symbol}
                             </p>
                           </div>
-                          <div className="flex flex-row justify-between">
+                          <div className="flex flex-row justify-between mt-2">
                             <p>Amount withdrawn</p>
                             <p>
                               {parseFloat(account.outWithdrawn.toString()) /
