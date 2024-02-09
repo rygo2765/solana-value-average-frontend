@@ -1,4 +1,4 @@
-import { ValueAverageProgram } from "solana-value-average";
+import { ValueAverageProgram } from "@jup-ag/value-average";
 import { conn } from "./constants";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import { Wallet } from "@jup-ag/wallet-adapter";
@@ -21,17 +21,20 @@ export async function openValueAverage(
   wallet: Wallet
 ) {
   try {
-    const { ixs, pda } = await programClient.open(
-      valueAverageData.userPublicKey,
-      valueAverageData.userPublicKey,
-      valueAverageData.inputToken,
-      valueAverageData.outputToken,
-      valueAverageData.orderInterval,
-      valueAverageData.deposit,
-      valueAverageData.usdcValueIncrement,
-      undefined,
-      valueAverageData.startDateTime
-    );
+    const { ixs, pda } = await programClient.open({
+      user: valueAverageData.userPublicKey,
+      payer: valueAverageData.userPublicKey,
+      inputMint: valueAverageData.inputToken,
+      outputMint: valueAverageData.outputToken,
+      orderInterval: valueAverageData.orderInterval,
+      depositAmount: valueAverageData.deposit,
+      incrementUSDCValue: valueAverageData.usdcValueIncrement,
+      feeDataAccount: undefined,
+      referralFeeAccount: undefined,
+      userInputAccount: undefined,
+      startAtUnix: valueAverageData.startDateTime,
+      autoWithdraw: true,
+    });
 
     const tx = new Transaction();
     tx.add(...ixs);
@@ -54,14 +57,103 @@ export async function openValueAverage(
       },
       "confirmed"
     );
-    toast.success('Transaction confirmed successfully!')
+    toast.success("Transaction confirmed successfully!");
   } catch (error) {
     console.error("Confirmation failed: ", error);
-    toast.error('Transaction confirmation failed. Please try again.');
+    toast.error("Transaction confirmation failed. Please try again.");
   }
 }
 
-export async function deposit(wallet: Wallet) {}
+export async function depositToken(
+  wallet: Wallet,
+  valueAverage: PublicKey,
+  amount: BigInt
+) {
+  try {
+    const depositInstructions = await programClient.deposit(
+      valueAverage,
+      amount
+    );
+
+    const tx = new Transaction();
+
+    tx.add(depositInstructions);
+
+    const txsig = await wallet?.adapter.sendTransaction(tx, conn, {
+      skipPreflight: false,
+    });
+
+    if (txsig === undefined) {
+      throw new Error("Transaction signature is undefined");
+    }
+
+    const latestBlockHash = await conn.getLatestBlockhash();
+
+    await conn.confirmTransaction(
+      {
+        blockhash: latestBlockHash.blockhash,
+        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+        signature: txsig,
+      },
+      "confirmed"
+    );
+    toast.success("Deposit confirmed successfully!");
+  } catch (error) {
+    console.error("Error in deposit: ", error);
+  }
+}
+
+export async function withdrawToken(
+  wallet: Wallet,
+  valueAveragePubKey: PublicKey,
+  withdrawalToken: Token,
+  amount: BigInt,
+) {
+  try {
+    const valueAverage = await programClient.get(valueAveragePubKey);
+
+    const tx = new Transaction();
+
+    console.log(valueAverage)
+    console.log(withdrawalToken)
+    console.log(amount)
+    
+    const withdrawTokenInstruction = await programClient.withdraw(
+      valueAverage.user,
+      valueAverage.user,
+      valueAveragePubKey,
+      new PublicKey(withdrawalToken.address),
+      undefined,
+      amount,
+      undefined
+    );
+
+    tx.add(...withdrawTokenInstruction);
+
+    const txsig = await wallet?.adapter.sendTransaction(tx, conn, {
+      skipPreflight: false,
+    });
+
+    if (txsig === undefined) {
+      throw new Error("Transaction signature is undefined");
+    }
+
+    const latestBlockHash = await conn.getLatestBlockhash();
+
+    await conn.confirmTransaction(
+      {
+        blockhash: latestBlockHash.blockhash,
+        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+        signature: txsig,
+      },
+      "confirmed"
+    );
+
+    toast.success("Withdrawal confirmed successfully");
+  } catch (error) {
+    console.error("Error in withdrawal: ", error);
+  }
+}
 
 export async function withdrawAllAndClose(
   wallet: Wallet,
@@ -75,14 +167,17 @@ export async function withdrawAllAndClose(
     if (valueAverage.inLeft > 0) {
       console.log(`Has input balance of ${valueAverage.inLeft.toString()}`);
 
-      tx.add(
-        await programClient.withdraw(
-          valueAverage.user,
-          valueAverage.user,
-          valueAveragePubKey,
-          valueAverage.inputMint
-        )
+      const withdrawInTokenInstruction = await programClient.withdraw(
+        valueAverage.user,
+        valueAverage.user,
+        valueAveragePubKey,
+        valueAverage.inputMint,
+        undefined,
+        undefined,
+        undefined
       );
+
+      tx.add(...withdrawInTokenInstruction);
     }
 
     if (valueAverage.outReceived - valueAverage.outWithdrawn > 0) {
@@ -92,17 +187,26 @@ export async function withdrawAllAndClose(
           .toString()}`
       );
 
-      tx.add(
-        await programClient.withdraw(
-          valueAverage.user,
-          valueAverage.user,
-          valueAveragePubKey,
-          valueAverage.outputMint
-        )
+      const withdrawOutTokenInstruction = await programClient.withdraw(
+        valueAverage.user,
+        valueAverage.user,
+        valueAveragePubKey,
+        valueAverage.outputMint,
+        undefined,
+        undefined,
+        undefined
       );
+
+      tx.add(...withdrawOutTokenInstruction);
     }
 
-    tx.add(await programClient.close(valueAverage.user, valueAveragePubKey));
+    tx.add(
+      await programClient.close(
+        valueAverage.user,
+        valueAveragePubKey,
+        undefined
+      )
+    );
 
     const txsig = await wallet?.adapter.sendTransaction(tx, conn, {
       skipPreflight: false,
@@ -204,6 +308,13 @@ export async function getAllTokens(): Promise<Token[]> {
 
   return tokens;
 }
+
+export const getTokenData = (
+  tokenList: Token[],
+  publicKey: PublicKey
+): Token | undefined => {
+  return tokenList.find((token) => token.address === publicKey.toBase58());
+};
 
 export function findTokenByAddress(
   tokens: Token[],

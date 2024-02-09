@@ -1,8 +1,16 @@
 "use client";
 import { PublicKey } from "@solana/web3.js";
-import { Token, withdrawAllAndClose } from "@/lib/helpers";
-import { useState } from "react";
+import {
+  Token,
+  withdrawAllAndClose,
+  getTokenData,
+  depositToken,
+  withdrawToken,
+} from "@/lib/helpers";
+import { useState, useEffect, ChangeEventHandler } from "react";
 import { Wallet } from "@jup-ag/wallet-adapter";
+import { programClient } from "@/lib/constants";
+import Orders from "./Orders";
 
 interface UserValueAvg {
   idx: BigInt;
@@ -32,13 +40,6 @@ interface OpenVAOverviewProps {
   tokenList: Token[];
   wallet: Wallet;
 }
-
-const getTokenData = (
-  tokenList: Token[],
-  publicKey: PublicKey
-): Token | undefined => {
-  return tokenList.find((token) => token.address === publicKey.toBase58());
-};
 
 const formatTimeInterval = (seconds: number) => {
   const minute = 60;
@@ -73,6 +74,10 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
   wallet,
 }) => {
   const [activeTab, setActiveTab] = useState("Overview");
+  const [fillHistories, setFillHistories] = useState<any[]>([]);
+  const [depositAmount, setDepositAmount] = useState<BigInt>(BigInt(0));
+  const [withdrawalAmount, setWithdrawalAmount] = useState<BigInt>(BigInt(0));
+  const [withdrawalToken, setWithdrawalToken] = useState<Token>();
 
   const toggleTab = (tabName: string) => {
     setActiveTab(tabName);
@@ -91,8 +96,77 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
     }
   };
 
-  if (!fetchedUserValueAvg) {
-    return <p>Loading data...</p>;
+  const handleDepositChange: ChangeEventHandler<HTMLInputElement> = (event) => {
+    setDepositAmount(BigInt(event.target.value));
+  };
+
+  const submitDeposit = async (
+    valueAveragePubKey: PublicKey,
+    decimals: number
+  ) => {
+    const inTokenAmount = BigInt(Number(depositAmount) * 10 ** decimals);
+    await depositToken(wallet, valueAveragePubKey, inTokenAmount);
+  };
+
+  const handleWithdrawalTokenToggle = (
+    inputTokenData: Token,
+    outputTokenData: Token
+  ) => {
+    setWithdrawalToken((prevToken) =>
+      prevToken!.symbol === inputTokenData.symbol
+        ? outputTokenData
+        : inputTokenData
+    );
+  };
+
+  const handleWithdrawalChange: ChangeEventHandler<HTMLInputElement> = (
+    event
+  ) => {
+    setWithdrawalAmount(BigInt(event.target.value));
+  };
+
+  const submitWithdrawal = async (valueAveragePubKey: PublicKey) => {
+    const withdrawTokenAmount = BigInt(
+      Number(withdrawalAmount) * 10 ** withdrawalToken!.decimals
+    );
+    await withdrawToken(
+      wallet,
+      valueAveragePubKey,
+      withdrawalToken!,
+      withdrawTokenAmount
+    );
+  };
+
+  useEffect(() => {
+    const fetchFillHistories = async () => {
+      const histories = await Promise.all(
+        fetchedUserValueAvg.map(async ({ publicKey }) => {
+          return await programClient.getFillHistory(publicKey);
+        })
+      );
+
+      setFillHistories(histories);
+    };
+
+    fetchFillHistories();
+  }, []);
+
+  useEffect(() => {
+    fetchedUserValueAvg.forEach(({ account }) => {
+      const outputTokenData = getTokenData(tokenList, account.outputMint);
+      if (outputTokenData) {
+        setWithdrawalToken(outputTokenData);
+        return;
+      }
+    });
+  }, [fetchedUserValueAvg, tokenList]);
+
+  if (fetchedUserValueAvg.length === 0) {
+    return (
+      <div className="w-full flex justify-center outline-dotted outline-gray-700 rounded items-center h-32">
+        <p className="text-center text-gray-600">You have no active orders</p>
+      </div>
+    );
   }
 
   return (
@@ -146,7 +220,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                   <a
                     target="_blank"
                     href={`https://solscan.io/account/${publicKey.toBase58()}`}
-                    className="ml-2"
+                    className="ml-2 relative z-10"
                   >
                     <svg
                       width="12"
@@ -188,7 +262,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                     >
                       <div className="flex flex-col text-xs">
                         <div className="flex flex-col bg-slate-600 w-full p-2 rounded">
-                          <div className="flex flex-row justify-between">
+                          <div className="flex flex-row justify-between mt-2">
                             <p>VA {inputTokenData!.symbol} balance </p>
                             <p>
                               {parseFloat(account.inLeft.toString()) /
@@ -196,7 +270,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                               {inputTokenData!.symbol}
                             </p>
                           </div>
-                          <div className="flex flex-row justify-between">
+                          <div className="flex flex-row justify-between mt-2">
                             <p>VA {outputTokenData!.symbol} balance </p>
                             <p>
                               {parseFloat(account.outReceived.toString()) /
@@ -204,13 +278,20 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                               {outputTokenData!.symbol}
                             </p>
                           </div>
-                          <div className="flex flex-row justify-between">
+                          <div className="flex flex-row justify-between mt-2">
                             <p>Amount withdrawn</p>
-                            <p>
-                              {parseFloat(account.outWithdrawn.toString()) /
-                                10 ** outputTokenData!.decimals}{" "}
-                              {outputTokenData!.symbol}
-                            </p>
+                            <div className="flex flex-col items-end">
+                              <p>
+                                {parseFloat(account.inWithdrawn.toString()) /
+                                  10 ** inputTokenData!.decimals}{" "}
+                                {inputTokenData!.symbol}
+                              </p>
+                              <p>
+                                {parseFloat(account.outWithdrawn.toString()) /
+                                  10 ** outputTokenData!.decimals}{" "}
+                                {outputTokenData!.symbol}
+                              </p>
+                            </div>
                           </div>
                         </div>
 
@@ -291,23 +372,85 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           </p>
                         </div>
                       </div>
+
                       <div className="flex flex-col w-full">
-                        <div className="flex flex-row justify-between mt-3 w-full">
-                          <button className="btn bg-yellow-500 text-black w-full">
-                            Deposit
-                          </button>
+                        <div className="flex flex-row justify-around mt-3 w-full">
+                          <div className="flex flex-col w-1/2  mx-2">
+                            <label className="label-text">
+                              <span className="label-text text-xs">
+                                Deposit More {inputTokenData?.symbol}
+                              </span>
+                            </label>
+                            <input
+                              type="number"
+                              placeholder="Enter deposit amount"
+                              value={depositAmount.toString()}
+                              onChange={handleDepositChange}
+                              className="w-full rounded h-8  pl-2"
+                            />
+                            <button
+                              className="btn btn-sm bg-yellow-500 text-black w-full mt-2"
+                              onClick={() =>
+                                submitDeposit(
+                                  publicKey,
+                                  inputTokenData!.decimals
+                                )
+                              }
+                            >
+                              Deposit
+                            </button>
+                          </div>
+                          <div className="divider divider-horizontal m-0" />
+                          <div className="flex flex-col w-1/2 mx-2">
+                            <label className="label-text">
+                              <span className="label-text text-xs">
+                                Withdraw {withdrawalToken?.symbol}
+                              </span>
+                            </label>
+                            <div className="flex flex-row items-center">
+                              <input
+                                type="number"
+                                placeholder="Enter withdrawal amount"
+                                value={withdrawalAmount.toString()}
+                                onChange={handleWithdrawalChange}
+                                className="w-3/4 rounded h-8 pl-2"
+                              />
+                              <label className="swap swap-flip ml-3">
+                                <input
+                                  type="checkbox"
+                                  onClick={() =>
+                                    handleWithdrawalTokenToggle(
+                                      inputTokenData!,
+                                      outputTokenData!
+                                    )
+                                  }
+                                />
+
+                                <img
+                                  className="swap-off w-8 h-8 rounded"
+                                  src={outputTokenData?.logoURI}
+                                />
+                                <img
+                                  className="swap-on w-8 h-8 rounded"
+                                  src={inputTokenData?.logoURI}
+                                />
+                              </label>
+                            </div>
+                            <button
+                              className="btn btn-sm bg-yellow-500 text-black w-full mt-2"
+                              onClick={() => submitWithdrawal(publicKey)}
+                            >
+                              Withdraw
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex flex-row justify-between mt-1 w-full">
-                          <button
-                            className="btn bg-yellow-500 text-black w-1/2 mr-0.5"
-                            onClick={() => submitWithdrawAndClose(publicKey)}
-                          >
-                            Withdraw & Close
-                          </button>
-                          <button className="btn bg-yellow-500 text-black w-1/2 ml-0.5">
-                            Withdraw
-                          </button>
-                        </div>
+
+                        <button
+                          className="btn bg-yellow-500 text-black w-full mt-3"
+                          onClick={() => submitWithdrawAndClose(publicKey)}
+                        >
+                          Withdraw & Close
+                        </button>
                       </div>
                     </div>
                   )}
@@ -322,8 +465,12 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                     onChange={() => toggleTab("Orders")}
                   />
                   {activeTab === "Orders" && (
-                    <div role="tabpanel" className="tab-content p-10">
-                      <p>No orders to show</p>
+                    <div role="tabpanel" className="tab-content pt-5">
+                      <Orders
+                        inTokenData={inputTokenData!}
+                        outTokenData={outputTokenData!}
+                        fillEvents={fillHistories[index]}
+                      />
                     </div>
                   )}
                 </div>

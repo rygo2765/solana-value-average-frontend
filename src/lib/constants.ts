@@ -1,8 +1,16 @@
 import { Connection } from "@solana/web3.js";
+import { ValueAverageProgram } from "@jup-ag/value-average";
 
 const rpcUrl =
   process.env.NEXT_PUBLIC_RPC || "https://api.mainnet-beta.solana.com";
+
 export const conn = new Connection(rpcUrl);
+
+export const programClient = new ValueAverageProgram(
+  conn,
+  "mainnet-beta",
+  "https://va.jup.ag"
+);
 
 export const usdcInfo = {
   address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",

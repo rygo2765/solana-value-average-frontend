@@ -3,24 +3,17 @@ import React, { useEffect, useState } from "react";
 import { useUnifiedWallet } from "@jup-ag/wallet-adapter";
 import { PublicKey } from "@solana/web3.js";
 import { TuiDateTimePicker } from "nextjs-tui-date-picker";
-import DateTimePicker from "react-datetime-picker";
 import {
   openValueAverage,
   validateAndConvertValues,
   getAllTokens,
   Token,
 } from "@/lib/helpers";
-import { ValueAverageProgram } from "solana-value-average";
-import { conn, usdcInfo, solInfo } from "@/lib/constants";
+import { programClient, usdcInfo, solInfo } from "@/lib/constants";
 import OpenVAOverview from "./components/OpenVAOverview";
 import TokenModal from "./components/TokenModal";
 import PastVAOverview from "./components/PastVAOverview";
 
-const programClient = new ValueAverageProgram(
-  conn,
-  "mainnet-beta",
-  "https://solana-value-average.keepbuilding.work"
-);
 const defaultInToken = usdcInfo;
 const defaultOutToken = solInfo;
 
@@ -31,6 +24,7 @@ const HomePage: React.FC = () => {
   const [selectedDateTime, setSelectedDateTime] = useState<Date>(new Date());
   const { wallet, connected } = useUnifiedWallet();
   const [userValueAvg, setUserValueAvg] = useState<any[] | null>(null);
+  const [pastUserValueAvg, setPastUserValueAvg] = useState<any[] | null>(null);
 
   const [tokenList, setTokenList] = useState<any[] | null>(null);
   const [selectedInToken, setSelectedInToken] = useState<Token>(defaultInToken);
@@ -59,16 +53,17 @@ const HomePage: React.FC = () => {
           const fetchedUserValueAvg = await programClient.getCurrentByUser(
             wallet.adapter.publicKey!
           );
-          console.log(fetchedUserValueAvg);
-          // const closedTest = await programClient.getClosedByUser(wallet.adapter.publicKey!)
-          // console.log(closedTest)
 
-          const fillTest = await programClient.getFillHistory(
-            fetchedUserValueAvg[0].publicKey
+          const fetchedPastUserValueAvg = await programClient.getClosedByUser(
+            wallet.adapter.publicKey!
           );
-          console.log(fillTest);
+
+          const fillTest = await programClient.getFillHistory(fetchedUserValueAvg[0].publicKey)
+
+          console.log(fillTest)
 
           setUserValueAvg(fetchedUserValueAvg);
+          setPastUserValueAvg(fetchedPastUserValueAvg);
         } catch (error) {
           console.error("Error fetching user value average:", error);
         }
@@ -352,8 +347,11 @@ const HomePage: React.FC = () => {
               tokenList={tokenList}
               wallet={wallet!}
             />
-          ) : !currentVA ? (
-            <PastVAOverview />
+          ) : !currentVA && pastUserValueAvg && tokenList ? (
+            <PastVAOverview
+              tokenList={tokenList}
+              fetchedClosedValueAvg={pastUserValueAvg}
+            />
           ) : null}
         </div>
       ) : null}
