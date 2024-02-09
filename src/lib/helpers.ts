@@ -34,7 +34,7 @@ export async function openValueAverage(
       userInputAccount: undefined,
       startAtUnix: valueAverageData.startDateTime,
       autoWithdraw: true,
-  });
+    });
 
     const tx = new Transaction();
     tx.add(...ixs);
@@ -57,14 +57,51 @@ export async function openValueAverage(
       },
       "confirmed"
     );
-    toast.success('Transaction confirmed successfully!')
+    toast.success("Transaction confirmed successfully!");
   } catch (error) {
     console.error("Confirmation failed: ", error);
-    toast.error('Transaction confirmation failed. Please try again.');
+    toast.error("Transaction confirmation failed. Please try again.");
   }
 }
 
-export async function deposit(wallet: Wallet) {}
+export async function depositToken(
+  wallet: Wallet,
+  valueAverage: PublicKey,
+  amount: BigInt
+) {
+  try {
+    const depositInstructions = await programClient.deposit(
+      valueAverage,
+      amount
+    );
+
+    const tx = new Transaction();
+
+    tx.add(depositInstructions);
+
+    const txsig = await wallet?.adapter.sendTransaction(tx, conn, {
+      skipPreflight: false,
+    });
+
+    if (txsig === undefined) {
+      throw new Error("Transaction signature is undefined");
+    }
+
+    const latestBlockHash = await conn.getLatestBlockhash();
+
+    await conn.confirmTransaction(
+      {
+        blockhash: latestBlockHash.blockhash,
+        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+        signature: txsig,
+      },
+      "confirmed"
+    );
+    toast.success("Deposit confirmed successfully!");
+  } catch (error) {
+    console.error("Error in deposit: ", error);
+  }
+}
 
 export async function withdrawAllAndClose(
   wallet: Wallet,
@@ -78,18 +115,17 @@ export async function withdrawAllAndClose(
     if (valueAverage.inLeft > 0) {
       console.log(`Has input balance of ${valueAverage.inLeft.toString()}`);
 
-      
       const withdrawInTokenInstruction = await programClient.withdraw(
-          valueAverage.user,
-          valueAverage.user,
-          valueAveragePubKey,
-          valueAverage.inputMint,
-          undefined,
-          undefined,
-          undefined
-        )
+        valueAverage.user,
+        valueAverage.user,
+        valueAveragePubKey,
+        valueAverage.inputMint,
+        undefined,
+        undefined,
+        undefined
+      );
 
-        tx.add(...withdrawInTokenInstruction)
+      tx.add(...withdrawInTokenInstruction);
     }
 
     if (valueAverage.outReceived - valueAverage.outWithdrawn > 0) {
@@ -99,23 +135,26 @@ export async function withdrawAllAndClose(
           .toString()}`
       );
 
-      
-        const withdrawOutTokenInstruction = await programClient.withdraw(
-          valueAverage.user,
-          valueAverage.user,
-          valueAveragePubKey,
-          valueAverage.outputMint,
-          undefined,
-          undefined,
-          undefined
-        )
+      const withdrawOutTokenInstruction = await programClient.withdraw(
+        valueAverage.user,
+        valueAverage.user,
+        valueAveragePubKey,
+        valueAverage.outputMint,
+        undefined,
+        undefined,
+        undefined
+      );
 
-        tx.add(...withdrawOutTokenInstruction)
+      tx.add(...withdrawOutTokenInstruction);
     }
 
-    tx.add(await programClient.close(valueAverage.user, valueAveragePubKey, undefined));
-
-    console.log(tx)
+    tx.add(
+      await programClient.close(
+        valueAverage.user,
+        valueAveragePubKey,
+        undefined
+      )
+    );
 
     const txsig = await wallet?.adapter.sendTransaction(tx, conn, {
       skipPreflight: false,
@@ -238,4 +277,3 @@ export function shortenAddress(address: string, length = 4) {
   const end = address.slice(-length);
   return `${start}...${end}`;
 }
-

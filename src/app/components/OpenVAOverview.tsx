@@ -1,7 +1,12 @@
 "use client";
 import { PublicKey } from "@solana/web3.js";
-import { Token, withdrawAllAndClose, getTokenData } from "@/lib/helpers";
-import { useState, useEffect } from "react";
+import {
+  Token,
+  withdrawAllAndClose,
+  getTokenData,
+  depositToken,
+} from "@/lib/helpers";
+import { useState, useEffect, ChangeEventHandler } from "react";
 import { Wallet } from "@jup-ag/wallet-adapter";
 import { programClient } from "@/lib/constants";
 import Orders from "./Orders";
@@ -69,7 +74,7 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState("Overview");
   const [fillHistories, setFillHistories] = useState<any[]>([]);
-
+  const [depositAmount, setDepositAmount] = useState<BigInt>(0);
 
   const toggleTab = (tabName: string) => {
     setActiveTab(tabName);
@@ -88,8 +93,24 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
     }
   };
 
-  if (!fetchedUserValueAvg) {
-    return <p>Loading data...</p>;
+  const handleDepositChange: ChangeEventHandler<HTMLInputElement> = (event) => {
+    setDepositAmount(BigInt(event.target.value));
+  };
+
+  const submitDeposit = async (
+    valueAveragePubKey: PublicKey,
+    decimals: number
+  ) => {
+    const inTokenAmount = BigInt(Number(depositAmount) * 10 ** decimals);
+    await depositToken(wallet, valueAveragePubKey, inTokenAmount);
+  };
+
+  if (fetchedUserValueAvg.length === 0) {
+    return (
+      <div className="w-full flex justify-center outline-dotted outline-gray-700 rounded items-center h-32">
+        <p className="text-center text-gray-600">You have no active orders</p>
+      </div>
+    );
   }
 
   useEffect(() => {
@@ -105,7 +126,6 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
 
     fetchFillHistories();
   }, []);
-
 
   return (
     <div className="w-full">
@@ -303,23 +323,48 @@ const OpenVAOverview: React.FC<OpenVAOverviewProps> = ({
                           </p>
                         </div>
                       </div>
+
                       <div className="flex flex-col w-full">
-                        <div className="flex flex-row justify-between mt-3 w-full">
-                          <button className="btn bg-yellow-500 text-black w-full">
-                            Deposit
-                          </button>
+                        <div className="flex flex-row justify-around mt-3 w-full">
+                          <div className="flex flex-col w-1/2  mx-2">
+                            <label className="label-text">
+                              <span className="label-text text-xs">
+                                Deposit more {inputTokenData?.symbol}
+                              </span>
+                            </label>
+                            <input
+                              type="number"
+                              placeholder="Enter deposit amount"
+                              value={depositAmount.toString()}
+                              onChange={handleDepositChange}
+                              className="w-full rounded h-8  pl-2"
+                            />
+                            <button
+                              className="btn btn-sm bg-yellow-500 text-black w-full mt-2"
+                              onClick={() =>
+                                submitDeposit(
+                                  publicKey,
+                                  inputTokenData?.decimals
+                                )
+                              }
+                            >
+                              Deposit
+                            </button>
+                          </div>
+                          <div className="divider divider-horizontal m-0" />
+                          <div className="flex flex-col w-1/2 items-center mx-2">
+                            <button className="btn btn-sm bg-yellow-500 text-black w-full">
+                              Withdraw
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex flex-row justify-between mt-1 w-full">
-                          <button
-                            className="btn bg-yellow-500 text-black w-1/2 mr-0.5"
-                            onClick={() => submitWithdrawAndClose(publicKey)}
-                          >
-                            Withdraw & Close
-                          </button>
-                          <button className="btn bg-yellow-500 text-black w-1/2 ml-0.5">
-                            Withdraw
-                          </button>
-                        </div>
+
+                        <button
+                          className="btn bg-yellow-500 text-black w-full mt-3"
+                          onClick={() => submitWithdrawAndClose(publicKey)}
+                        >
+                          Withdraw & Close
+                        </button>
                       </div>
                     </div>
                   )}
