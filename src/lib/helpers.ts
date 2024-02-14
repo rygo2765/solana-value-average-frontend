@@ -113,10 +113,6 @@ export async function withdrawToken(
     const valueAverage = await programClient.get(valueAveragePubKey);
 
     const tx = new Transaction();
-
-    console.log(valueAverage)
-    console.log(withdrawalToken)
-    console.log(amount)
     
     const withdrawTokenInstruction = await programClient.withdraw(
       valueAverage.user,

@@ -58,9 +58,11 @@ const HomePage: React.FC = () => {
             wallet.adapter.publicKey!
           );
 
-          const fillTest = await programClient.getFillHistory(fetchedUserValueAvg[0].publicKey)
+          const fillTest = await programClient.getFillHistory(
+            fetchedUserValueAvg[0].publicKey
+          );
 
-          console.log(fillTest)
+          console.log(fillTest);
 
           setUserValueAvg(fetchedUserValueAvg);
           setPastUserValueAvg(fetchedPastUserValueAvg);
@@ -322,23 +324,26 @@ const HomePage: React.FC = () => {
 
       {connected ? (
         <div id="displayOpened" className="flex flex-col w-[460px]">
-          <div className="flex flex-row justify-start mb-4">
-            <button
-              className={`btn btn-sm mx-2 text-black ${
-                currentVA ? "bg-blue-500" : "bg-gray-300"
-              }`}
-              onClick={handleActiveValueAvgsClick}
-            >
-              Active Value Avgs
-            </button>
-            <button
-              className={`btn btn-sm mx-2 text-black ${
-                !currentVA ? "bg-blue-500" : "bg-gray-300"
-              }`}
-              onClick={handlePastValueAvgsClick}
-            >
-              Past Value Avgs
-            </button>
+          <div className="flex flex-row justify-between mb-4">
+            <div className="flex flex-row justify-start">
+              <button
+                className={`btn btn-sm mx-2 text-black ${
+                  currentVA ? "bg-blue-500" : "bg-gray-300"
+                }`}
+                onClick={handleActiveValueAvgsClick}
+              >
+                Active Value Avgs
+              </button>
+              <button
+                className={`btn btn-sm mx-2 text-black ${
+                  !currentVA ? "bg-blue-500" : "bg-gray-300"
+                }`}
+                onClick={handlePastValueAvgsClick}
+              >
+                Past Value Avgs
+              </button>
+            </div>
+            <button className="btn btn-sm btn-ghost">Refetch Data</button>
           </div>
 
           {currentVA && userValueAvg && tokenList ? (
