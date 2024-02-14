@@ -25,57 +25,48 @@ const HomePage: React.FC = () => {
   const { wallet, connected } = useUnifiedWallet();
   const [userValueAvg, setUserValueAvg] = useState<any[] | null>(null);
   const [pastUserValueAvg, setPastUserValueAvg] = useState<any[] | null>(null);
-
   const [tokenList, setTokenList] = useState<any[] | null>(null);
   const [selectedInToken, setSelectedInToken] = useState<Token>(defaultInToken);
   const [selectedOutToken, setSelectedOutToken] =
     useState<Token>(defaultOutToken);
   const [currentVA, setCurrentVA] = useState(true);
 
-  //Hooks
   useEffect(() => {
-    const fetchTokenList = async () => {
-      try {
-        const tokens = await getAllTokens();
-        setTokenList(tokens);
-      } catch (error) {
-        console.error("Error fetching token list: ", error);
-      }
-    };
-
     fetchTokenList();
   }, []);
 
   useEffect(() => {
-    const fetchUserValueAvg = async () => {
-      if (connected && wallet) {
-        try {
-          const fetchedUserValueAvg = await programClient.getCurrentByUser(
-            wallet.adapter.publicKey!
-          );
-
-          const fetchedPastUserValueAvg = await programClient.getClosedByUser(
-            wallet.adapter.publicKey!
-          );
-
-          const fillTest = await programClient.getFillHistory(
-            fetchedUserValueAvg[0].publicKey
-          );
-
-          console.log(fillTest);
-
-          setUserValueAvg(fetchedUserValueAvg);
-          setPastUserValueAvg(fetchedPastUserValueAvg);
-        } catch (error) {
-          console.error("Error fetching user value average:", error);
-        }
-      }
-    };
-
-    fetchUserValueAvg();
+    if (connected && wallet) {
+      fetchUserValueAvg();
+    }
   }, [connected, wallet]);
 
-  //Event Handlers
+  const fetchTokenList = async () => {
+    try {
+      const tokens = await getAllTokens();
+      setTokenList(tokens);
+    } catch (error) {
+      console.error("Error fetching token list: ", error);
+    }
+  };
+
+  const fetchUserValueAvg = async () => {
+    try {
+      const fetchedUserValueAvg = await programClient.getCurrentByUser(
+        wallet!.adapter.publicKey!
+      );
+
+      const fetchedPastUserValueAvg = await programClient.getClosedByUser(
+        wallet!.adapter.publicKey!
+      );
+
+      setUserValueAvg(fetchedUserValueAvg);
+      setPastUserValueAvg(fetchedPastUserValueAvg);
+    } catch (error) {
+      console.error("Error fetching user value average:", error);
+    }
+  };
+
   const handleTimeframeSelect = (timeframe: string) => {
     switch (timeframe) {
       case "minute":
@@ -343,7 +334,7 @@ const HomePage: React.FC = () => {
                 Past Value Avgs
               </button>
             </div>
-            <button className="btn btn-sm btn-ghost">Refetch Data</button>
+            <button className="btn btn-sm btn-ghost" onClick={fetchUserValueAvg}>Refetch Data</button>
           </div>
 
           {currentVA && userValueAvg && tokenList ? (
