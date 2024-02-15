@@ -68,35 +68,21 @@ const HomePage: React.FC = () => {
   };
 
   const handleTimeframeSelect = (timeframe: string) => {
-    switch (timeframe) {
-      case "minute":
-        setSelectedTimeframe(timeframe);
-        setSelectedTimeframeInSec(60);
-        break;
-      case "hour":
-        setSelectedTimeframe(timeframe);
-        setSelectedTimeframeInSec(60 * 60);
-        break;
-      case "day":
-        setSelectedTimeframe(timeframe);
-        setSelectedTimeframeInSec(60 * 60 * 24);
-        break;
-      case "week":
-        setSelectedTimeframe(timeframe);
-        setSelectedTimeframeInSec(60 * 60 * 24 * 7);
-        break;
-      case "month":
-        setSelectedTimeframe(timeframe);
-        setSelectedTimeframeInSec(60 * 60 * 24 * 7 * 30);
-        break;
-    }
+    const timeframeInSeconds: { [key: string]: number } = {
+      minute: 60,
+      hour: 60 * 60,
+      day: 60 * 60 * 24,
+      week: 60 * 60 * 24 * 7,
+      month: 60 * 60 * 24 * 7 * 30,
+    };
+
+    setSelectedTimeframe(timeframe);
+    setSelectedTimeframeInSec(timeframeInSeconds[timeframe]);
     setIsDropdownOpen(false);
   };
 
   const handleDateTimeSelect = (newDateTime: Date): void => {
-    console.log(newDateTime);
     const parsedDate = new Date(newDateTime);
-    console.log(parsedDate);
     setSelectedDateTime(parsedDate);
   };
 
@@ -118,9 +104,6 @@ const HomePage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    console.log(selectedInToken.decimals);
-    console.log(selectedOutToken.decimals);
 
     if (!connected) {
       throw new Error("Wallet is not connected.");
@@ -156,8 +139,6 @@ const HomePage: React.FC = () => {
       usdcValueIncrement: conversionResult!.valueIncrement,
       startDateTime: BigInt(selectedDateTime.getTime() / 1000),
     };
-
-    console.log(valueAverageData);
 
     await openValueAverage(valueAverageData, wallet!);
   };
@@ -334,7 +315,12 @@ const HomePage: React.FC = () => {
                 Past Value Avgs
               </button>
             </div>
-            <button className="btn btn-sm btn-ghost" onClick={fetchUserValueAvg}>Refetch Data</button>
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={fetchUserValueAvg}
+            >
+              Refetch Data
+            </button>
           </div>
 
           {currentVA && userValueAvg && tokenList ? (

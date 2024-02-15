@@ -299,9 +299,6 @@ export async function getAllTokens(): Promise<Token[]> {
     }
   });
 
-  console.log("Maximum Name Length:", maxNameLength);
-  console.log("Token with Maximum Name:", tokenWithMaxLength);
-
   return tokens;
 }
 
